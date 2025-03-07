@@ -1,5 +1,6 @@
 plugins {
 	id 'java'
+	id 'jacoco'
 	id 'org.springframework.boot' version '3.4.3'
 	id 'io.spring.dependency-management' version '1.1.7'
 }
@@ -11,6 +12,16 @@ java {
 	toolchain {
 		languageVersion = JavaLanguageVersion.of(21)
 	}
+}
+
+jacoco {
+	toolVersion = "0.8.9"
+	reportsDirectory = layout.buildDirectory.dir("reports/jacoco")
+}
+
+test {
+	useJUnitPlatform()
+	finalizedBy jacocoTestReport // 테스트 후 JaCoCo 리포트 생성
 }
 
 configurations {
@@ -30,8 +41,47 @@ dependencies {
 	compileOnly 'org.projectlombok:lombok'
 	runtimeOnly 'com.h2database:h2'
 	annotationProcessor 'org.projectlombok:lombok'
+
+	//test
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+}
+
+jacocoTestReport {
+	reports {
+		xml.required = true
+		csv.required = false
+		html.required = true
+	}
+}
+
+jacocoTestCoverageVerification {
+	violationRules {
+		/*
+        클래스 단위로 브랜치와 라인 커버리지 비율을 체크한다.
+        Lombok으로 생성된 코드는 @Generated를 통해 테스트 커버리지 대상에서 제외된다.
+         */
+		rule {
+			element = 'CLASS'
+
+			limit {
+				counter = 'BRANCH'
+				value = 'COVEREDRATIO'
+				minimum = 0.80
+			}
+
+			limit {
+				counter = 'LINE'
+				value = 'COVEREDRATIO'
+				minimum = 0.80
+			}
+
+			excludes = [
+					'com.flab.tiple.TipleApplication',
+			]
+		}
+	}
 }
 
 tasks.named('test') {
