@@ -2,6 +2,7 @@ package com.flab.tiple.member.controller;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.flab.tiple.global.config.AbstractRestDocs;
 import com.flab.tiple.global.response.ApiResponse;
 import com.flab.tiple.member.dto.request.MemberCreateRequestDto;
 import com.flab.tiple.member.dto.response.MemberCreateResponseDto;
@@ -9,7 +10,6 @@ import com.flab.tiple.member.service.MemberService;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.mockito.Mock;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.http.MediaType;
@@ -23,8 +23,9 @@ import static org.mockito.BDDMockito.given;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+
 @WebMvcTest(MemberController.class)
-public class MemberControllerTest {
+public class MemberControllerTest extends AbstractRestDocs {
     @Autowired
     private MockMvc mockMvc;
 
@@ -54,9 +55,12 @@ public class MemberControllerTest {
 
         //when
         ResultActions resultActions = mockMvc.perform(
-                post("/api/member/signup")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(requestDto)));
+                        post("/api/member/signup")
+                                .contentType(MediaType.APPLICATION_JSON)
+                                .content(objectMapper.writeValueAsString(requestDto)));
+
+
+
 
         //then
         MockHttpServletResponse response = resultActions.andExpect(status().isOk())
