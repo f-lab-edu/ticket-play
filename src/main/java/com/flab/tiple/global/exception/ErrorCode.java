@@ -5,6 +5,7 @@ import lombok.Getter;
 
 @Getter
 public enum ErrorCode {
+    UNAUTHORIZED("인증실패", 401),
     MEMBER_DUPLICATED("이 유저는 이미 가입된 멤버입니다", 400),
     MEMBER_NOT_FOUND("유저를 찾을 수 없습니다", 400);
 

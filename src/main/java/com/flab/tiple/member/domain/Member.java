@@ -1,7 +1,12 @@
 package com.flab.tiple.member.domain;
 
 import com.flab.tiple.global.entity.BaseTime;
+import com.flab.tiple.member.enums.RoleEnum;
+
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -21,12 +26,17 @@ public class Member extends BaseTime {
     private String password;
     private String name;
 
+    @Column(length = 20, nullable = false)
+    @Enumerated(EnumType.STRING)
+    private RoleEnum role;
+
 
     @Builder
-    public Member(String name, String email, String password) {
+    public Member(String name, String email, String password, RoleEnum role) {
         this.name = name;
         this.email = email;
         this.password = password;
+        this.role = role;
     }
 
 }
