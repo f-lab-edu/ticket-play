@@ -2,6 +2,7 @@ package com.flab.tiple.global.security;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.MediaType;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
@@ -11,6 +12,12 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.flab.tiple.global.exception.ErrorCode;
+import com.flab.tiple.global.response.ApiResponse;
+
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 
@@ -49,27 +56,36 @@ import lombok.RequiredArgsConstructor;
 public class SecurityConfig {
 
 	private final CustomUserDetailsService userDetailsService;
+	private final JwtTokenProvider jwtTokenProvider;
 
 	@Bean
 	public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
-
-
 		http
 			//CSRF(Cross-Site Request Forgery)
 			.csrf(csrf -> csrf.disable()) // REST API에서는 CSRF 보호가 필요 없음
 			.authorizeHttpRequests(auth -> auth
-				.requestMatchers("/api/member/signup", "/api/login").permitAll() // 로그인 엔드포인트 추가
+				.requestMatchers("/api/members/signup", "/api/auth/login").permitAll() // 로그인 엔드포인트 추가
 				.anyRequest().authenticated()
 			)
-			.httpBasic(httpBasic -> httpBasic.authenticationEntryPoint((request, response, authException) -> {
-				response.setContentType("application/json");
-				response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
-				response.getWriter().write("{\"status\": 401, \"message\": \"인증되지 않은 접근입니다.\"}");
-			}))
+			.exceptionHandling(exception -> exception
+				.authenticationEntryPoint((request, response, authException) -> {
+					response.setContentType(MediaType.APPLICATION_JSON_VALUE);
+					response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+
+					ApiResponse<String> errorResponse = ApiResponse.error(
+						ErrorCode.UNAUTHORIZED, ErrorCode.UNAUTHORIZED.getDescription(), null);
+					response.getWriter().write(new ObjectMapper().writeValueAsString(errorResponse));
+				})
+			)
+			// HTTP Basic 인증 비활성화 (JWT 사용할 것이므로)
+			.httpBasic(httpBasic -> httpBasic.disable())
 			// 세션 관리 설정 (REST API는 일반적으로 무상태)
 			.sessionManagement(session -> session
 				.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
 			);
+
+		http.addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider, userDetailsService),
+			UsernamePasswordAuthenticationFilter.class);
 
 		return http.build();
 	}
