@@ -36,6 +36,10 @@ jobs:
       - name: Build without Test
         run: ./gradlew build -x test
 
+      - name: auto configure spring rest docs
+        run: |
+          ./gradlew copyDocument
+
       - name: Run Tests and Generate Coverage Report
         run: ./gradlew test jacocoTestReport
 
