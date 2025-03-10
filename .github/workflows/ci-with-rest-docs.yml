@@ -1,0 +1,65 @@
+#Workflow 이름과 실행 조건
+name: ci with API rest docs
+
+on:
+  pull_request:
+    branches: [ "main" ] #main 브랜치로 Pull Request가 생성될 때 실행됨.
+
+#build라는 Job을 정의.
+jobs:
+  build:
+    runs-on: ubuntu-latest #실행 환경: ubuntu-latest
+    permissions:
+      pull-requests: write # PR에 자동으로 코멘트를 남길 수 있도록 설정.
+
+    steps:
+      - uses: actions/checkout@v3 #actions/checkout@v3 → 코드 체크아웃.
+      - name: Set up JDK 21
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      #Gradle 실행을 위한 권한 설정
+      - name: Grant execute permission for gradlew
+        run: chmod +x gradlew #gradlew 실행 권한 부여 (chmod +x gradlew)→ Linux 환경에서 Gradle Wrapper(./gradlew) 실행 가능하도록 함.
+      #Spring REST Docs 빌드 및 복사
+      #./gradlew build -x test → 테스트 실행 제외하고(-x test) 프로젝트 빌드.
+      #./gradlew copyDocument → REST Docs를 특정 위치로 복사.
+      - name : auto configure spring rest docs
+        run: |
+          ./gradlew build -x test 
+          ./gradlew copyDocument
+
+      #GitHub Pages에 배포할 파일 업로드
+      #actions/upload-pages-artifact@v1 → GitHub Pages에 업로드할 파일을 지정.
+      #REST Docs가 빌드된 파일들을 src/main/resources/static/docs 폴더에서 가져와서 업로드.
+      - name : upload pages artifact
+        uses: actions/upload-pages-artifact@v1
+        with:
+          path: 'src/main/resources/static/docs'
+  #deploy Job은 build Job이 끝난 후 실행됨 (needs: build).
+  #권한 설정:
+  #pages: write → GitHub Pages 배포 권한.
+  #id-token: write → GitHub OIDC 인증을 위한 권한.
+
+  #환경 설정 (environment)
+  #name: github-pages → GitHub Pages 환경 사용.
+  #url: ${{ steps.deployment.outputs.page_url }} → deploy Job에서 page_url을 가져와 GitHub Pages URL로 사용.
+  deploy:
+    needs: build
+    permissions:
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    # GitHub Pages 배포
+    #실행 환경: ubuntu-latest
+    #actions/deploy-pages@v1 → GitHub Pages에 업로드한 파일을 배포.
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v1

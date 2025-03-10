@@ -1,0 +1,23 @@
+spring:
+  datasource:
+    url: jdbc:h2:tcp://localhost/~/tiple
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: create  # 테이블을 drop하고 새로 생성
+    properties:
+      hibernate:
+        format_sql: true # Hibernate가 생성하는 SQL 쿼리를 사람이 읽기 쉬운 형태로 포맷팅, 로그에서 SQL을 더 쉽게 디버깅할 수 있음
+
+server:
+  port: ${port:5003}
+  forward-headers-strategy: native # 서버가 요청 헤더를 어떻게 처리할지 지정
+  # native 옵션은 서버가 프록시나 로드 밸런서에서 전달된 헤더를 그대로 사용
+  # 주로 애플리케이션이 프록시 뒤에 있을 때, X-Forwarded-For와 같은 헤더를 제대로 처리하기 위해 사용
+
+logging.level:
+  org.hibernate.SQL: debug
+  org.hibernate.type: trace
