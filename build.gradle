@@ -1,7 +1,9 @@
 plugins {
 	id 'java'
+	id 'jacoco' //jacoco설정
 	id 'org.springframework.boot' version '3.4.3'
 	id 'io.spring.dependency-management' version '1.1.7'
+	id 'org.asciidoctor.jvm.convert' version '3.3.2' // rest-docs설정
 }
 
 group = 'com.flab.tiple'
@@ -13,8 +15,21 @@ java {
 	}
 }
 
+jacoco {
+	toolVersion = "0.8.9"
+	reportsDirectory = layout.buildDirectory.dir("reports/jacoco")
+}
+
+test {
+	useJUnitPlatform()
+	finalizedBy jacocoTestReport // 테스트 후 JaCoCo 리포트 생성
+}
+
 configurations {
+	asciidoctorExtensions // Asciidoctor 플러그인을 위한 설정. Spring REST Docs에서 Asciidoctor를 사용할 때 필요함.
 	compileOnly {
+		//annotationProcessor 설정을 compileOnly에도 적용.
+		//Lombok 등의 어노테이션 프로세서를 사용할 때 필요.
 		extendsFrom annotationProcessor
 	}
 }
@@ -30,10 +45,106 @@ dependencies {
 	compileOnly 'org.projectlombok:lombok'
 	runtimeOnly 'com.h2database:h2'
 	annotationProcessor 'org.projectlombok:lombok'
+
+	//test
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+	//rest-docs
+	asciidoctorExtensions 'org.springframework.restdocs:spring-restdocs-asciidoctor'
+	testImplementation 'org.springframework.restdocs:spring-restdocs-mockmvc'
+
 }
 
+//JaCoCo 설정
+jacocoTestReport {
+	reports {
+		xml.required = true //xml.required = true → XML 리포트 생성 (PR에서 커버리지 체크할 때 사용)
+		csv.required = false //csv.required = false → CSV 리포트는 필요 없음
+		html.required = true //HTML 리포트 생성 (개발자가 보기 편하게)
+	}
+}
+
+//ext {} 블록 (전역 변수 설정)
+ext {
+	// 아래서 사용할 변수 선언
+	snippetsDir = file('build/generated-snippets')
+}
+
+//test {} 블록 (테스트 설정)
+test {
+	//outputs.dir snippetsDir → 테스트 실행 시, 문서 조각(snippets)이 build/generated-snippets에 저장됨
+	outputs.dir snippetsDir
+	//JUnit 5 (JUnit Jupiter)를 사용.
+	useJUnitPlatform()
+}
+
+// asciidoctor 설정(Spring REST Docs 관련 설정)
+asciidoctor {
+	dependsOn test //테스트 실행 후에 실행됨. ->Spring REST Docs의 문서 조각이 테스트 실행 후 생성되기 때문
+	configurations 'asciidoctorExtensions'
+	inputs.dir snippetsDir //build/generated-snippets 디렉토리를 문서 입력값으로 사용
+
+	//문서에 포함할 .adoc 파일 지정 -> index.adoc만 포함.
+	sources{
+		include("**/index.adoc")
+	}
+
+	baseDirFollowsSourceFile()
+
+	// 문서 내부에서 사용할 속성 정의
+	attributes 'snippets': snippetsDir,
+			'operation-curl-request-title': 'Example request',
+			'operation-http-response-title': 'Example response'
+}
+
+// REST Docs 폴더 초기화
+asciidoctor.doFirst {
+	//REST Docs를 다시 만들기 전에 기존 static/docs 폴더 삭제.
+	delete file('src/main/resources/static/docs')
+}
+
+// copyDocument (REST Docs 결과 복사)
+task copyDocument(type: Copy) {
+	dependsOn asciidoctor //asciidoctor 작업이 끝난 후 실행됨.
+	from file("build/docs/asciidoc") // Asciidoctor가 생성한 HTML 문서를 build/docs/asciidoc에서 가져옴.
+	into file("src/main/resources/static/docs") //Spring Boot 정적 리소스 디렉토리 (static/docs)로 복사.
+}
+
+//테스트 커버리지 기준을 설정. (최소 80% 이상 유지해야 함).
+//		BRANCH → 코드 분기(branch) 기준 80% 이상 커버
+//       LINE → 코드 라인(line) 기준 80% 이상 커버
+jacocoTestCoverageVerification {
+	violationRules {
+		/*
+        클래스 단위로 브랜치와 라인 커버리지 비율을 체크한다.
+        Lombok으로 생성된 코드는 @Generated를 통해 테스트 커버리지 대상에서 제외된다.
+         */
+		rule {
+			element = 'CLASS'
+
+			limit {
+				counter = 'BRANCH'
+				value = 'COVEREDRATIO'
+				minimum = 0.80
+			}
+
+			limit {
+				counter = 'LINE'
+				value = 'COVEREDRATIO'
+				minimum = 0.80
+			}
+
+			//클래스 커버리지 측정 제외대상
+			excludes = [
+					'com.flab.tiple.TipleApplication',
+			]
+		}
+	}
+}
+
+//테스트 플랫폼 설정
 tasks.named('test') {
+	//테스트 실행 시 JUnit 5(JUnit Jupiter) 사용
 	useJUnitPlatform()
 }
