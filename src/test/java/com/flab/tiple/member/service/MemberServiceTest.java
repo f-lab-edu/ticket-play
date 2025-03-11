@@ -1,6 +1,5 @@
 package com.flab.tiple.member.service;
 
-import com.flab.tiple.global.util.PasswordUtil;
 import com.flab.tiple.member.domain.Member;
 import com.flab.tiple.member.dto.request.MemberCreateRequestDto;
 import com.flab.tiple.member.dto.response.MemberCreateResponseDto;
@@ -12,7 +11,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
@@ -24,7 +23,7 @@ public class MemberServiceTest {
     private MemberRepository memberRepository;
 
     @Mock
-    private PasswordUtil passwordUtil;
+    private PasswordEncoder passwordUtil;
 
     @InjectMocks
     private MemberServiceImpl memberService;
@@ -46,7 +45,7 @@ public class MemberServiceTest {
                 .build();
 
         when(memberRepository.existsByEmail(requestDto.getEmail())).thenReturn(false);
-        when(passwordUtil.encrypt(requestDto.getPassword())).thenReturn("encryptedPassword");
+        when(passwordUtil.encode(requestDto.getPassword())).thenReturn("encryptedPassword");
         when(memberRepository.save(any(Member.class))).thenReturn(mockMember);
 
         // When
