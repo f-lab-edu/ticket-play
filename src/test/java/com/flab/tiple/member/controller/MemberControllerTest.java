@@ -4,6 +4,9 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.flab.tiple.global.config.AbstractRestDocs;
 import com.flab.tiple.global.response.ApiResponse;
+import com.flab.tiple.global.security.CustomUserDetailsService;
+import com.flab.tiple.global.security.JwtTokenProvider;
+import com.flab.tiple.global.security.SecurityConfig;
 import com.flab.tiple.member.dto.request.MemberCreateRequestDto;
 import com.flab.tiple.member.dto.response.MemberCreateResponseDto;
 import com.flab.tiple.member.service.MemberService;
@@ -24,13 +27,20 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 
-@WebMvcTest(MemberController.class)
+@WebMvcTest({MemberController.class, SecurityConfig.class})
 public class MemberControllerTest extends AbstractRestDocs {
     @Autowired
     private MockMvc mockMvc;
 
     @MockitoBean
     private MemberService memberService;
+
+    // SecurityConfig에 필요한 의존성 MockBean으로 추가
+    @MockitoBean
+    private CustomUserDetailsService customUserDetailsService;
+
+    @MockitoBean
+    private JwtTokenProvider jwtTokenProvider;
 
     @Autowired
     private ObjectMapper objectMapper;
@@ -55,7 +65,7 @@ public class MemberControllerTest extends AbstractRestDocs {
 
         //when
         ResultActions resultActions = mockMvc.perform(
-                        post("/api/member/signup")
+                        post("/api/members/signup")
                                 .contentType(MediaType.APPLICATION_JSON)
                                 .content(objectMapper.writeValueAsString(requestDto)));
 
