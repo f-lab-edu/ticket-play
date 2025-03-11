@@ -6,6 +6,8 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import java.util.Map;
 import org.assertj.core.api.Assertions;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -47,6 +49,17 @@ public class AuthControllerTest extends AbstractRestDocs {
 
 	@Autowired
 	private ObjectMapper objectMapper;
+
+	@BeforeEach
+	void setUp() {
+		//openssl 명령어로 랜덤 값 생성
+		System.setProperty("jwt.secret", "00d3c5be72e5a5ab6cf053ddb4a016f9c6521718b01422fbfe83103211445dd100acb59223d0d67da44400c4f9ef9735d78c6c33c9950a46ca5a603d4c845e14");
+	}
+
+	@AfterEach
+	void tearDown() {
+		System.clearProperty("jwt.secret");
+	}
 
 	/**
 	 * @WithMockUser의 역할

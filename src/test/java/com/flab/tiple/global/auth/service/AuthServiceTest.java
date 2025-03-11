@@ -6,6 +6,7 @@ import static org.mockito.Mockito.*;
 import java.util.Collections;
 import java.util.Optional;
 
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -58,7 +59,17 @@ public class AuthServiceTest {
 		SimpleGrantedAuthority authority = new SimpleGrantedAuthority(RoleEnum.ROLE_USER.name());
 		authentication = new UsernamePasswordAuthenticationToken(
 			"test@example.com", null, Collections.singleton(authority));
+
+		//openssl 명령어로 랜덤 값 생성
+		System.setProperty("jwt.secret", "00d3c5be72e5a5ab6cf053ddb4a016f9c6521718b01422fbfe83103211445dd100acb59223d0d67da44400c4f9ef9735d78c6c33c9950a46ca5a603d4c845e14");
 	}
+
+	@AfterEach
+	void tearDown() {
+		// 테스트 후 시스템 프로퍼티 초기화
+		System.clearProperty("jwt.secret");
+	}
+
 
 	@Test
 	@DisplayName("로그인 성공")
