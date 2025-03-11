@@ -12,10 +12,18 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
-
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.*;
+import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.verify;
+
+/**
+ * Import에서 *는 피하는게 좋은 이유
+ *   1. 이름 충돌 위험: 여러 패키지에서 동일한 이름의 클래스를 와일드카드로 임포트할 경우, 예상치 못한 이름 충돌이 발생할 수 있음.
+ *   2. 의도하지 않은 사용: 패키지 전체를 임포트하면 실제로 필요하지 않은 클래스까지 접근 가능해져, 의도하지 않은 사용이 발생할 수 있음.
+ */
 
 @ExtendWith(MockitoExtension.class)
 public class MemberServiceTest {

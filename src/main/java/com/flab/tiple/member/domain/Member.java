@@ -1,5 +1,6 @@
 package com.flab.tiple.member.domain;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.flab.tiple.global.entity.BaseTime;
 import com.flab.tiple.member.enums.RoleEnum;
 
@@ -23,6 +24,8 @@ public class Member extends BaseTime {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
     private String email;
+    // JSON 직렬화 시 패스워드 필드를 제외하기 위해 @JsonIgnore사용.
+    @JsonIgnore
     private String password;
     private String name;
 
@@ -39,4 +42,12 @@ public class Member extends BaseTime {
         this.role = role;
     }
 
+    // 패스워드가 로그 등에 노출되지 않도록 하기 위해 toString() 메서드를 오버라이드
+    @Override
+    public String toString() {
+        return "Member{" +
+            "id=" + id +
+            ", email='" + email + '\'' +
+            '}';
+    }
 }
