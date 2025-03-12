@@ -71,23 +71,21 @@ public class JwtTokenProvider {
 	 *  1. setSigningKey을 통해 secretKey의 바이트코드를 가져와 키생성
 	 *  2. parseClaimsJws를 통해 JWT(헤더,페이로드, 서명)을 분리 후 계산된 서명과 JWT서명을 비교.유효하면 Jwt<Claims>반환
 	 */
-	public String getEmailFromToken(String token) {
-		Claims claims = Jwts.parserBuilder()
+	private Claims parseToken(String token) {
+		return Jwts.parserBuilder()
 			.setSigningKey(Keys.hmacShaKeyFor(secretKey.getBytes()))
 			.build()
 			.parseClaimsJws(token)
 			.getBody();
+	}
 
+	public String getEmailFromToken(String token) {
+		Claims claims = parseToken(token);
 		return claims.getSubject();
 	}
 
 	public List<String> getRolesFromToken(String token) {
-		Claims claims = Jwts.parserBuilder()
-			.setSigningKey(Keys.hmacShaKeyFor(secretKey.getBytes()))
-			.build()
-			.parseClaimsJws(token)
-			.getBody();
-
+		Claims claims = parseToken(token);
 		return claims.get("roles", List.class);
 	}
 
@@ -99,17 +97,17 @@ public class JwtTokenProvider {
 				.parseClaimsJws(token);
 			return true;
 		} catch (ExpiredJwtException e) {
-			log.error("만료된 JWT 토큰입니다.", e);
+			log.error("만료된 JWT 토큰입니다.");
 			throw new TokenException(ErrorCode.TOKEN_EXPIRED, "만료된 JWT 토큰입니다.");
 		} catch (JwtException e) {
-			log.error("유효하지 않은 JWT 토큰입니다.", e);
+			log.error("유효하지 않은 JWT 토큰입니다.");
 			throw new TokenException(ErrorCode.TOKEN_INVALID, "유효하지 않은 JWT 토큰입니다.");
 		} catch (IllegalArgumentException e) {
-			log.error("JWT 토큰이 비어있거나 올바르지 않습니다.", e);
-			throw new TokenException(ErrorCode.TOKEN_MALFORMED, "JWT 토큰이 비어있거나 올바르지 않습니다.");
+			log.error("JWT 토큰이 비어있거나 올바르지 않습니다.");
+			throw new TokenException(ErrorCode.TOKEN_MALFORMED, "JWT 토큰이 올바르지 않습니다.");
 		} catch (Exception e) {
-			log.error("그 외 JWT토큰 에러입니다.", e);
-			throw new TokenException(ErrorCode.TOKEN_ERROR, "JWT 토큰이 비어있거나 올바르지 않습니다.");
+			log.error("그 외 JWT토큰 에러입니다.");
+			throw new TokenException(ErrorCode.TOKEN_ERROR, "JWT 토큰 관련 에러가 발생했습니다.");
 		}
 	}
 }

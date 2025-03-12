@@ -43,6 +43,10 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 	private final JwtTokenProvider jwtTokenProvider;
 	private final CustomUserDetailsService userDetailsService;
 
+	private static final String AUTHORIZATION_HEADER = "Authorization";
+	private static final String BEARER_PREFIX = "Bearer ";
+	private static final int BEARER_PREFIX_LENGTH = BEARER_PREFIX.length();
+
 	/**
 	 * doFilterInternal: doFilterInternal호출시  OncePerRequestFilter의 doFilter 메서드를 호출
 	 *
@@ -112,10 +116,11 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 		filterChain.doFilter(request, response);
 	}
 
+	// Magic number: 코드 내에서 특별한 의미를 가지지만 그 의미가 명확하게 설명되지 않은 숫자
 	private String getJwtFromRequest(HttpServletRequest request) {
-		String bearerToken = request.getHeader("Authorization");
-		if (StringUtils.hasText(bearerToken) && bearerToken.startsWith("Bearer ")) {
-			return bearerToken.substring(7);
+		String bearerToken = request.getHeader(AUTHORIZATION_HEADER);
+		if (StringUtils.hasText(bearerToken) && bearerToken.startsWith(BEARER_PREFIX)) {
+			return bearerToken.substring(BEARER_PREFIX_LENGTH);
 		}
 		return null;
 	}

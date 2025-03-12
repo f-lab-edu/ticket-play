@@ -23,5 +23,5 @@ logging.level:
   org.hibernate.type: trace
 
 jwt:
-  secret: 7b12e01a0f31a167ef98b17c1583cf106b75f3d5995045779388617186f1357d1940ce7709f4aa44bb69874a9b31d0b331546536264dc97011d28a1935cd8959
+  secret: ${jwt.secret}
   expiration-ms: 86400000
