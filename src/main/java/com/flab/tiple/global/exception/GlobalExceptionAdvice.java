@@ -41,6 +41,11 @@ public class GlobalExceptionAdvice {
         return createErrorResponse(e, e.getErrorCode());
     }
 
+    @ExceptionHandler(TokenException.class)
+    public ApiResponse<ErrorResponse> handleTokenException(TokenException e) {
+        return createErrorResponse(e, e.getErrorCode());
+    }
+
     private ApiResponse<ErrorResponse> createErrorResponse(Exception e, ErrorCode errorCode) {
         log.warn(e.getClass().getName(), e);
 
