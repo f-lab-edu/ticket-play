@@ -66,6 +66,12 @@ dependencies {
 	//aop
 	implementation 'org.springframework.boot:spring-boot-starter-aop'
 
+	// QueryDSL 의존성
+	implementation 'com.querydsl:querydsl-jpa:5.0.0:jakarta'
+	annotationProcessor 'com.querydsl:querydsl-apt:5.0.0:jakarta'
+	annotationProcessor 'jakarta.annotation:jakarta.annotation-api'
+	annotationProcessor 'jakarta.persistence:jakarta.persistence-api'
+
 }
 
 //JaCoCo 설정
@@ -155,6 +161,26 @@ jacocoTestCoverageVerification {
 	}
 }
 
+// QueryDSL 설정
+def querydslDir = "src/main/generated/querydsl"
+
+sourceSets {
+	main {
+		java {
+			srcDirs += [ querydslDir ]
+		}
+	}
+}
+
+tasks.withType(JavaCompile) {
+	options.annotationProcessorGeneratedSourcesDirectory = file(querydslDir)
+}
+
+tasks.named('clean') {
+	doLast {
+		file(querydslDir).deleteDir()
+	}
+}
 //테스트 플랫폼 설정
 tasks.named('test') {
 	//테스트 실행 시 JUnit 5(JUnit Jupiter) 사용

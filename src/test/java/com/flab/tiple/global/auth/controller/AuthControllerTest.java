@@ -29,6 +29,7 @@ import com.flab.tiple.global.response.ApiResponse;
 import com.flab.tiple.global.security.CustomUserDetailsService;
 import com.flab.tiple.global.security.JwtTokenProvider;
 import com.flab.tiple.global.security.SecurityConfig;
+import com.flab.tiple.global.util.JwtTokenUtil;
 import com.flab.tiple.member.exception.MemberNotFoundException;
 
 //실제 내가 설정한 SecurityConfig환경내에서 테스트하기 위해 설정을 가져옴.
@@ -46,6 +47,9 @@ public class AuthControllerTest extends AbstractRestDocs {
 
 	@MockitoBean
 	private JwtTokenProvider jwtTokenProvider;
+
+	@MockitoBean
+	private JwtTokenUtil jwtTokenUtil;
 
 	@Autowired
 	private ObjectMapper objectMapper;
