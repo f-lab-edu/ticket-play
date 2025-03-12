@@ -17,6 +17,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.flab.tiple.global.exception.ErrorCode;
 import com.flab.tiple.global.response.ApiResponse;
+import com.flab.tiple.global.util.JwtTokenUtil;
 
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -57,6 +58,7 @@ public class SecurityConfig {
 
 	private final CustomUserDetailsService userDetailsService;
 	private final JwtTokenProvider jwtTokenProvider;
+	private final JwtTokenUtil jwtTokenUtil;
 
 	@Bean
 	public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
@@ -84,7 +86,7 @@ public class SecurityConfig {
 				.sessionCreationPolicy(SessionCreationPolicy.STATELESS)
 			);
 
-		http.addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider, userDetailsService),
+		http.addFilterBefore(new JwtAuthenticationFilter(jwtTokenProvider, userDetailsService, jwtTokenUtil),
 			UsernamePasswordAuthenticationFilter.class);
 
 		return http.build();

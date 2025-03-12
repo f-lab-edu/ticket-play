@@ -1,6 +1,5 @@
 package com.flab.tiple.global.auth.aop;
 
-import static com.flab.tiple.global.util.JwtTokenUtil.getJwtFromRequest;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
@@ -12,6 +11,8 @@ import org.springframework.web.context.request.ServletRequestAttributes;
 import com.flab.tiple.global.auth.exception.JwtUnauthorizedException;
 import com.flab.tiple.global.exception.ErrorCode;
 import com.flab.tiple.global.security.JwtTokenProvider;
+import com.flab.tiple.global.util.JwtTokenUtil;
+
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;
 
@@ -38,6 +39,7 @@ import lombok.AllArgsConstructor;
 @AllArgsConstructor
 public class LoginCheckAspect {
 	private final JwtTokenProvider jwtTokenProvider;
+	private final JwtTokenUtil jwtTokenUtil;
 
 	/**
 	 * ProceedingJoinPoint의 역할
@@ -65,7 +67,7 @@ public class LoginCheckAspect {
 					.getRequest();
 
 			// 토큰 추출 및 검증
-			String token = getJwtFromRequest(request);
+			String token = jwtTokenUtil.getJwtFromRequest(request);
 
 			// 토큰 유효성 검사
 			if (token == null || !jwtTokenProvider.validateToken(token)) {
