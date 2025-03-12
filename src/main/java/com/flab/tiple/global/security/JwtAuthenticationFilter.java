@@ -17,6 +17,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.flab.tiple.global.exception.TokenException;
 import com.flab.tiple.global.response.ApiResponse;
+import com.flab.tiple.global.util.JwtTokenUtil;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -42,10 +43,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
 	private final JwtTokenProvider jwtTokenProvider;
 	private final CustomUserDetailsService userDetailsService;
-
-	private static final String AUTHORIZATION_HEADER = "Authorization";
-	private static final String BEARER_PREFIX = "Bearer ";
-	private static final int BEARER_PREFIX_LENGTH = BEARER_PREFIX.length();
+	private final JwtTokenUtil jwtTokenUtil;
 
 	/**
 	 * doFilterInternal: doFilterInternal호출시  OncePerRequestFilter의 doFilter 메서드를 호출
@@ -60,7 +58,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 	protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
 		throws ServletException, IOException {
 		try {
-			String jwt = getJwtFromRequest(request);
+			String jwt = jwtTokenUtil.getJwtFromRequest(request);
 
 			if (StringUtils.hasText(jwt)) {
 				// validateToken이 예외를 던지지 않으면 토큰은 유효함
@@ -116,12 +114,4 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 		filterChain.doFilter(request, response);
 	}
 
-	// Magic number: 코드 내에서 특별한 의미를 가지지만 그 의미가 명확하게 설명되지 않은 숫자
-	private String getJwtFromRequest(HttpServletRequest request) {
-		String bearerToken = request.getHeader(AUTHORIZATION_HEADER);
-		if (StringUtils.hasText(bearerToken) && bearerToken.startsWith(BEARER_PREFIX)) {
-			return bearerToken.substring(BEARER_PREFIX_LENGTH);
-		}
-		return null;
-	}
 }
