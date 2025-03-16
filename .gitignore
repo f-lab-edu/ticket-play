@@ -5,6 +5,11 @@ build/
 !**/src/main/**/build/
 !**/src/test/**/build/
 
+# QueryDSL
+/src/main/generated/
+**/generated/
+**/Q*.java
+
 ### STS ###
 .apt_generated
 .classpath
