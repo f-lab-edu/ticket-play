@@ -57,7 +57,7 @@ public class TicketReservationServiceTest {
 	private ConcertRepository concertRepository;
 
 	@InjectMocks
-	private TicketReservationService ticketReservationService;
+	private TicketReservationServiceImpl ticketReservationServiceImpl;
 
 	private Member member;
 	private ConcertSeat concertSeat;
@@ -131,7 +131,7 @@ public class TicketReservationServiceTest {
 			.thenReturn(ticketReservation);
 
 		// When
-		TicketReservationResponseDto responseDto = ticketReservationService
+		TicketReservationResponseDto responseDto = ticketReservationServiceImpl
 			.requestReservation(requestDto, member.getId());
 
 		//then
@@ -161,7 +161,7 @@ public class TicketReservationServiceTest {
 
 		// When & Then
 		assertThrows(ConcertClosedException.class, () ->
-			ticketReservationService.requestReservation(requestDto, member.getId())
+			ticketReservationServiceImpl.requestReservation(requestDto, member.getId())
 		);
 
 	}
@@ -185,7 +185,7 @@ public class TicketReservationServiceTest {
 
 		// When & Then
 		assertThrows(ConcertNotStartDateException.class, () ->
-			ticketReservationService.requestReservation(requestDto, member.getId())
+			ticketReservationServiceImpl.requestReservation(requestDto, member.getId())
 		);
 	}
 
@@ -210,7 +210,7 @@ public class TicketReservationServiceTest {
 
 		// When & Then
 		assertThrows(ConcertEndTimeException.class, () ->
-			ticketReservationService.requestReservation(requestDto, member.getId())
+			ticketReservationServiceImpl.requestReservation(requestDto, member.getId())
 		);
 	}
 
@@ -232,7 +232,7 @@ public class TicketReservationServiceTest {
 			.thenReturn(Optional.of(differentMember));
 		// When & Then
 		assertThrows(MemberNotMatchException.class, () ->
-			ticketReservationService.approveReservation(ticketReservation.getId(), differentMember.getId())
+			ticketReservationServiceImpl.approveReservation(ticketReservation.getId(), differentMember.getId())
 		);
 	}
 
@@ -253,7 +253,7 @@ public class TicketReservationServiceTest {
 
 		// When & Then
 		assertThrows(TicketReservationStatusException.class, () ->
-			ticketReservationService.approveReservation(ticketReservation.getId(), member.getId())
+			ticketReservationServiceImpl.approveReservation(ticketReservation.getId(), member.getId())
 		);
 	}
 
@@ -275,7 +275,7 @@ public class TicketReservationServiceTest {
 			.thenReturn(ticketReservation);
 
 		// When
-		TicketReservationResponseDto responseDto = ticketReservationService
+		TicketReservationResponseDto responseDto = ticketReservationServiceImpl
 			.cancelReservation(ticketReservation.getId(), member.getId());
 
 		// Then
@@ -301,7 +301,7 @@ public class TicketReservationServiceTest {
 
 		// When & Then
 		assertThrows(TicketReservationStatusException.class, () ->
-			ticketReservationService.cancelReservation(ticketReservation.getId(), member.getId())
+			ticketReservationServiceImpl.cancelReservation(ticketReservation.getId(), member.getId())
 		);
 	}
 
@@ -323,7 +323,7 @@ public class TicketReservationServiceTest {
 
 		// When & Then
 		assertThrows(ConcertCancelTimeException.class, () ->
-			ticketReservationService.cancelReservation(ticketReservation.getId(), member.getId())
+			ticketReservationServiceImpl.cancelReservation(ticketReservation.getId(), member.getId())
 		);
 	}
 
@@ -335,7 +335,7 @@ public class TicketReservationServiceTest {
 			.thenReturn(List.of(ticketReservation));
 
 		// When
-		List<TicketReservationResponseDto> reservations = ticketReservationService
+		List<TicketReservationResponseDto> reservations = ticketReservationServiceImpl
 			.getMemberReservations(member.getId());
 
 		// Then

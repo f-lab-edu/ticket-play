@@ -1,12 +1,16 @@
 package com.flab.tiple.ticket.controller;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.BDDMockito.*;
+import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
 
 import java.lang.reflect.Field;
 import java.time.LocalDateTime;
@@ -51,6 +55,7 @@ import com.flab.tiple.ticket.dto.response.TicketReservationResponseDto;
 import com.flab.tiple.ticket.enums.TicketReservationStatus;
 import com.flab.tiple.ticket.service.TicketReservationService;
 
+
 @WebMvcTest(
 	controllers = TicketReservationController.class,
 	excludeAutoConfiguration = {SecurityAutoConfiguration.class},
@@ -67,7 +72,7 @@ public class TicketReservationControllerTest {
 	private ObjectMapper objectMapper;
 
 	@MockitoBean
-	private TicketReservationService ticketReservationService;
+	private TicketReservationService ticketReservationServiceImpl;
 
 	@MockitoBean
 	private JwtTokenUtil jwtTokenUtil;
@@ -135,7 +140,7 @@ public class TicketReservationControllerTest {
 		// Given
 		System.out.println(ticketReservationResponseDto.toString());
 
-		given(ticketReservationService.requestReservation(any(TicketReservationRequestDto.class), eq(1L)))
+		given(ticketReservationServiceImpl.requestReservation(any(TicketReservationRequestDto.class), eq(1L)))
 			.willReturn(ticketReservationResponseDto);
 
 		// When
@@ -178,7 +183,7 @@ public class TicketReservationControllerTest {
 	void approveReservationSuccess() throws Exception {
 		// Given
 		ReflectionTestUtils.setField(ticketReservationResponseDto, "status", TicketReservationStatus.APPROVED);
-		when(ticketReservationService.approveReservation(anyLong(), anyLong()))
+		when(ticketReservationServiceImpl.approveReservation(anyLong(), anyLong()))
 			.thenReturn(ticketReservationResponseDto);
 
 
@@ -208,7 +213,7 @@ public class TicketReservationControllerTest {
 	void cancelReservationSuccess() throws Exception {
 		// Given
 		ReflectionTestUtils.setField(ticketReservationResponseDto, "status", TicketReservationStatus.CANCELLED);
-		when(ticketReservationService.cancelReservation(anyLong(), anyLong()))
+		when(ticketReservationServiceImpl.cancelReservation(anyLong(), anyLong()))
 			.thenReturn(ticketReservationResponseDto);
 
 		// When
@@ -236,7 +241,7 @@ public class TicketReservationControllerTest {
 	void getMemberReservationsSuccess() throws Exception {
 		// Given
 		List<TicketReservationResponseDto> reservations = List.of(ticketReservationResponseDto);
-		when(ticketReservationService.getMemberReservations(anyLong()))
+		when(ticketReservationServiceImpl.getMemberReservations(anyLong()))
 			.thenReturn(reservations);
 
 		// When & Then

@@ -1,6 +1,5 @@
 package com.flab.tiple.ticket.dto.response;
 
-import java.time.LocalDateTime;
 
 import com.flab.tiple.concert.dto.response.ConcertSeatInfo;
 import com.flab.tiple.member.dto.response.MemberInfoDto;
