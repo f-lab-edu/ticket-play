@@ -66,7 +66,7 @@ public class SecurityConfig {
 			//CSRF(Cross-Site Request Forgery)
 			.csrf(csrf -> csrf.disable()) // REST API에서는 CSRF 보호가 필요 없음
 			.authorizeHttpRequests(auth -> auth
-				.requestMatchers("/api/members/signup", "/api/auth/login").permitAll() // 로그인 엔드포인트 추가
+				.requestMatchers("/api/members/signup", "/api/auth/login","/api/concerts","/api/concerts/**").permitAll() // 로그인 엔드포인트 추가
 				.anyRequest().authenticated()
 			)
 			.exceptionHandling(exception -> exception

@@ -167,20 +167,38 @@ def querydslDir = "src/main/generated/querydsl"
 sourceSets {
 	main {
 		java {
-			srcDirs += [ querydslDir ]
+			srcDirs += [querydslDir]
 		}
 	}
 }
+
+// 4. 단순화된 QueryDSL 컴파일 태스크
+task compileQuerydsl(type: JavaCompile, group: 'build') {
+	source = sourceSets.main.java
+	classpath = configurations.compileClasspath
+	options.annotationProcessorPath = configurations.annotationProcessor
+	options.compilerArgs = [
+			"-proc:only",
+			"-processor", "com.querydsl.apt.jpa.JPAAnnotationProcessor"
+	]
+	destinationDir = file("$buildDir")
+	options.compilerArgs += ["-s", querydslDir]
+
+	doFirst {
+		file(querydslDir).deleteDir()
+		file(querydslDir).mkdirs()
+	}
+}
+
 
 tasks.withType(JavaCompile) {
 	options.annotationProcessorGeneratedSourcesDirectory = file(querydslDir)
 }
 
-tasks.named('clean') {
-	doLast {
-		file(querydslDir).deleteDir()
-	}
+clean {
+	delete querydslDir
 }
+
 //테스트 플랫폼 설정
 tasks.named('test') {
 	//테스트 실행 시 JUnit 5(JUnit Jupiter) 사용

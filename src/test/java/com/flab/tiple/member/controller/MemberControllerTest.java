@@ -7,6 +7,7 @@ import com.flab.tiple.global.response.ApiResponse;
 import com.flab.tiple.global.security.CustomUserDetailsService;
 import com.flab.tiple.global.security.JwtTokenProvider;
 import com.flab.tiple.global.security.SecurityConfig;
+import com.flab.tiple.global.util.JwtTokenUtil;
 import com.flab.tiple.member.dto.request.MemberCreateRequestDto;
 import com.flab.tiple.member.dto.response.MemberCreateResponseDto;
 import com.flab.tiple.member.service.MemberService;
@@ -41,6 +42,9 @@ public class MemberControllerTest extends AbstractRestDocs {
 
     @MockitoBean
     private JwtTokenProvider jwtTokenProvider;
+
+    @MockitoBean
+    private JwtTokenUtil jwtTokenUtil;
 
     @Autowired
     private ObjectMapper objectMapper;
