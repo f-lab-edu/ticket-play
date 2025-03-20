@@ -41,16 +41,17 @@ public class AuthServiceImpl implements AuthService{
 		// 2. SecurityContext에 인증 정보 저장
 		SecurityContextHolder.getContext().setAuthentication(authentication);
 
-		// 3. JWT 토큰 생성
-		String jwt = jwtTokenProvider.generateToken(
-			loginRequestDto.getEmail(),
-			authentication.getAuthorities()
-		);
+
 
 		// 4. 사용자 정보 조회
 		Member member = memberRepository.findByEmail(loginRequestDto.getEmail())
 			.orElseThrow(() -> new MemberNotFoundException(ErrorCode.MEMBER_NOT_FOUND,ErrorCode.MEMBER_NOT_FOUND.getDescription()));
-
+		// 3. JWT 토큰 생성
+		String jwt = jwtTokenProvider.generateToken(
+			member.getEmail(),
+			member.getId(),
+			authentication.getAuthorities()
+		);
 		// 5. 응답 DTO 생성
 		return new LoginResponseDto(
 			jwt

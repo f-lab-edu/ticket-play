@@ -24,8 +24,8 @@ import lombok.RequiredArgsConstructor;
 @Transactional(readOnly = true)
 public class ConcertServiceImpl implements ConcertService {
 
-	private ConcertRepository concertRepository;
-	private ConcertSeatRepository concertSeatRepository;
+	private final ConcertRepository concertRepository;
+	private final ConcertSeatRepository concertSeatRepository;
 
 	@Override
 	public PageResponse<ConcertResponseDto> getAllConcerts(Pageable pageable) {

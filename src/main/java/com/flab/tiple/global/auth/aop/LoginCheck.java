@@ -22,8 +22,6 @@ import java.lang.annotation.Target;
  *    ElementType.FIELD: 필드에 적용
  *    ElementType.PARAMETER: 메서드 파라미터에 적용
  *
- * 여기서 METHOD를 선택한 이유:
- * 로그인 체크를 메서드 단위로 제어하기 위함 -> 특정 메서드에만 로그인 필요 여부를 설정하고 싶을 때 사용
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.METHOD)

@@ -52,12 +52,13 @@ public class JwtTokenProvider {
 	 *  1. 현재 날짜와 만료 날짜 계산후
 	 *  2. 토큰 생성
 	 */
-	public String generateToken(String email, Collection<? extends GrantedAuthority> authorities) {
+	public String generateToken(String email, Long memberId,Collection<? extends GrantedAuthority> authorities) {
 		Date now = new Date();
 		Date expiryDate = new Date(now.getTime() + expirationMs);
 
 		return Jwts.builder()
 			.setSubject(email) // 제목등록
+			.claim("memberId", memberId) // memberId 추가
 			.claim("roles", authorities.stream()
 				.map(GrantedAuthority::getAuthority)
 				.collect(Collectors.toList())) // 클레임 등록
@@ -88,7 +89,17 @@ public class JwtTokenProvider {
 		Claims claims = parseToken(token);
 		return claims.get("roles", List.class);
 	}
+	public Long getMemberIdFromToken(String token) {
+		// 토큰에서 회원 ID 추출하는 로직
+		// 예: Claims에서 memberId 클레임 추출
+		Claims claims = Jwts.parserBuilder()
+			.setSigningKey(Keys.hmacShaKeyFor(secretKey.getBytes()))
+			.build()
+			.parseClaimsJws(token)
+			.getBody();
 
+		return claims.get("memberId", Long.class);
+	}
 	public boolean validateToken(String token) {
 		try {
 			Jwts.parserBuilder()

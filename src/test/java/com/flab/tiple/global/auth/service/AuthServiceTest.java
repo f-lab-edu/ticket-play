@@ -77,7 +77,7 @@ public class AuthServiceTest {
 		when(authenticationManager.authenticate(any(UsernamePasswordAuthenticationToken.class)))
 			.thenReturn(authentication);
 
-		when(jwtTokenProvider.generateToken(anyString(), any()))
+		when(jwtTokenProvider.generateToken(anyString(), any(),any()))
 			.thenReturn("test.jwt.token");
 
 		when(memberRepository.findByEmail("test@example.com"))

@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS concert_seat (
                               concert_id INT,
                               grade VARCHAR(20),
                               seat_number TINYINT,
+                              status VARCHAR(20),
                               created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                               updated_at TIMESTAMP DEFAULT NULL,
                               deleted_at TIMESTAMP NULL
@@ -32,15 +33,16 @@ CREATE TABLE IF NOT EXISTS member (
                         email VARCHAR(120) NOT NULL UNIQUE,
                         password VARCHAR(255) NOT NULL,
                         name VARCHAR(100) NOT NULL,
+                        role VARCHAR(20) NOT NULL,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT NULL,
-                        deleted_at TIMESTAMP NULL
+                        deleted_at TIMESTAMP DEFAULT NULL
 );
 
 CREATE TABLE IF NOT EXISTS ticket_reservation (
                                     id BIGINT AUTO_INCREMENT PRIMARY KEY,
-                                    user_id BIGINT NOT NULL,
-                                    ticket_id BIGINT NOT NULL,
+                                    member_id BIGINT NOT NULL,
+                                    seat_id BIGINT NOT NULL,
                                     status VARCHAR(20) NOT NULL,
                                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                                     updated_at TIMESTAMP DEFAULT NULL,
