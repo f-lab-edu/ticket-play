@@ -23,10 +23,15 @@ public class Member extends BaseTime {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
+
+    @Column(nullable = false, length = 200)
     private String email;
     // JSON 직렬화 시 패스워드 필드를 제외하기 위해 @JsonIgnore사용.
     @JsonIgnore
+    @Column(nullable = false, length = 100)
     private String password;
+
+    @Column(nullable = false, length = 100)
     private String name;
 
     @Column(length = 20, nullable = false)
