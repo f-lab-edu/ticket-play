@@ -1,8 +1,3 @@
-DELETE FROM ticket_waiting;
-DELETE FROM ticket_reservation;
-DELETE FROM concert_seat;
-DELETE FROM concert;
-DELETE FROM member;
 
 
 INSERT INTO concert (id,name, artist_name, start_time, end_time, reservation_start_time, reservation_end_time, remaining_seat, status, concert_hall_name, concert_hall_address, concert_seat_info)

@@ -1,3 +1,9 @@
+drop table concert;
+drop table concert_seat;
+drop table member;
+drop table ticket_reservation;
+drop table ticket_waiting;
+
 
 CREATE TABLE IF NOT EXISTS concert  (
                          id INT AUTO_INCREMENT PRIMARY KEY,
@@ -52,7 +58,7 @@ CREATE TABLE IF NOT EXISTS ticket_reservation (
 CREATE TABLE IF NOT EXISTS ticket_waiting (
                                 id BIGINT AUTO_INCREMENT PRIMARY KEY,
                                 concert_id BIGINT NOT NULL,
-                                user_id BIGINT NOT NULL,
+                                member_id BIGINT NOT NULL,
                                 waiting_number INT NOT NULL,
                                 status VARCHAR(20) NOT NULL,
                                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

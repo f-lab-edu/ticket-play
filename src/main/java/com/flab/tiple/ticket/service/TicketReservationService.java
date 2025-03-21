@@ -3,6 +3,7 @@ package com.flab.tiple.ticket.service;
 import java.util.List;
 
 import com.flab.tiple.ticket.dto.request.TicketReservationRequestDto;
+import com.flab.tiple.ticket.dto.response.TicketReservationInfoResponseDto;
 import com.flab.tiple.ticket.dto.response.TicketReservationResponseDto;
 
 public interface TicketReservationService {
@@ -10,10 +11,10 @@ public interface TicketReservationService {
 		TicketReservationRequestDto requestDto,
 		Long memberId
 	);
-	TicketReservationResponseDto approveReservation(Long reservationId, Long memberId);
-	TicketReservationResponseDto cancelReservation(
+	TicketReservationInfoResponseDto approveReservation(Long reservationId, Long memberId);
+	TicketReservationInfoResponseDto cancelReservation(
 		Long reservationId,
 		Long memberId
 	);
-	List<TicketReservationResponseDto> getMemberReservations(Long memberId);
+	List<TicketReservationInfoResponseDto> getMemberReservations(Long memberId);
 }

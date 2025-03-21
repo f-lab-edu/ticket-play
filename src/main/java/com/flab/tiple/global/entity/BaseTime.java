@@ -29,4 +29,14 @@ public abstract class BaseTime {
     private LocalDateTime updatedAt;
 
     private LocalDateTime deletedAt;
+
+    public void update() {
+        this.updatedAt = LocalDateTime.now();
+    }
+
+    // 논리적 삭제를 위한 메서드
+    public void delete() {
+        this.deletedAt = LocalDateTime.now();
+    }
+
 }

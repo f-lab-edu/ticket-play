@@ -9,7 +9,9 @@ import com.flab.tiple.concert.domain.Concert;
 import com.flab.tiple.concert.domain.ConcertSeat;
 import com.flab.tiple.concert.dto.response.ConcertSeatInfo;
 import com.flab.tiple.concert.exception.ConcertNotFoundException;
+import com.flab.tiple.concert.exception.ConcertRemainSeatExistException;
 import com.flab.tiple.concert.exception.ConcertSeatNotFoundException;
+import com.flab.tiple.concert.exception.ConcertSeatReservationException;
 import com.flab.tiple.concert.repository.concert.ConcertRepository;
 import com.flab.tiple.concert.repository.concertSeat.ConcertSeatRepository;
 import com.flab.tiple.global.exception.ErrorCode;
@@ -19,10 +21,17 @@ import com.flab.tiple.member.exception.MemberNotFoundException;
 import com.flab.tiple.member.repository.MemberRepository;
 import com.flab.tiple.ticket.domain.TicketReservation;
 import com.flab.tiple.ticket.dto.request.TicketReservationRequestDto;
+import com.flab.tiple.ticket.dto.response.TicketReservationInfoResponseDto;
 import com.flab.tiple.ticket.dto.response.TicketReservationResponseDto;
+import com.flab.tiple.waiting.dto.response.TicketWaitingResponseDto;
+import com.flab.tiple.ticket.enums.TicketProcessStatus;
 import com.flab.tiple.ticket.enums.TicketReservationStatus;
 import com.flab.tiple.ticket.exception.TicketReservationNotFoundException;
 import com.flab.tiple.ticket.repository.TicketReservationRepository;
+import com.flab.tiple.waiting.domain.TicketWaiting;
+import com.flab.tiple.waiting.enums.TicketWaitingStatus;
+import com.flab.tiple.waiting.excpetion.TicketWaitingRegisterException;
+import com.flab.tiple.waiting.repository.TicketWaitingRepository;
 
 import lombok.RequiredArgsConstructor;
 
@@ -34,24 +43,49 @@ public class TicketReservationServiceImpl implements TicketReservationService {
 	private final ConcertSeatRepository concertSeatRepository;
 	private final MemberRepository memberRepository;
 	private final ConcertRepository concertRepository;
+	private final TicketWaitingRepository ticketWaitingRepository;
 
 	// 티켓 예약 요청
 	@Transactional
 	@Override
-	public TicketReservationResponseDto requestReservation(
+	public TicketReservationResponseDto<?> requestReservation(
+		TicketReservationRequestDto requestDto,
+		Long memberId
+	) {
+		try {
+			// 일반 예약 시도
+			TicketReservationInfoResponseDto reservation = tryReserveSeat(requestDto, memberId);
+			return TicketReservationResponseDto.builder()
+				.data(reservation)
+				.status(TicketProcessStatus.SUCCESS)
+				.build();
+		} catch (ConcertSeatReservationException e) {
+			// 좌석이 사용 불가능한 경우, 웨이팅 처리 로직으로 진행
+			TicketWaitingResponseDto waitingReservation = processWaitingRegistration(requestDto, memberId);
+			return TicketReservationResponseDto.builder()
+				.data(waitingReservation)
+				.status(TicketProcessStatus.WAITING)
+				.build();
+		}
+	}
+
+	@Transactional
+	protected TicketReservationInfoResponseDto tryReserveSeat(
 		TicketReservationRequestDto requestDto,
 		Long memberId
 	) {
 		// 좌석 및 멤버 정보 조회
 		ConcertSeat seat = concertSeatRepository.findById(requestDto.getSeatId())
-			.orElseThrow(() -> new ConcertSeatNotFoundException(ErrorCode.CONCERT_SEAT_NOT_FOUND,ErrorCode.CONCERT_SEAT_NOT_FOUND.getDescription()));
+			.orElseThrow(() -> new ConcertSeatNotFoundException(ErrorCode.CONCERT_SEAT_NOT_FOUND,
+				ErrorCode.CONCERT_SEAT_NOT_FOUND.getDescription()));
 
 		Concert concert = concertRepository.findById(seat.getConcert().getId())
-			.orElseThrow(()-> new ConcertNotFoundException(ErrorCode.CONCERT_NOT_FOUND,ErrorCode.CONCERT_NOT_FOUND.getDescription()));
+			.orElseThrow(()-> new ConcertNotFoundException(ErrorCode.CONCERT_NOT_FOUND,
+				ErrorCode.CONCERT_NOT_FOUND.getDescription()));
 
-		System.out.println("memberId:"+memberId);
 		Member member = memberRepository.findById(memberId)
-			.orElseThrow(()-> new MemberNotFoundException(ErrorCode.MEMBER_NOT_FOUND, ErrorCode.MEMBER_NOT_FOUND.getDescription()));
+			.orElseThrow(()-> new MemberNotFoundException(ErrorCode.MEMBER_NOT_FOUND,
+				ErrorCode.MEMBER_NOT_FOUND.getDescription()));
 
 		//콘서트 예매가능한 상황인지 체크
 		concert.reservationStatusCheck();
@@ -62,18 +96,71 @@ public class TicketReservationServiceImpl implements TicketReservationService {
 			.seat(seat)
 			.status(TicketReservationStatus.PENDING)
 			.build();
+
 		seat.pending();
+		//콘서트 예약가능좌석 수 변동
+		concert.reserveSeat();
 
 		TicketReservation savedReservation = ticketReservationRepository.save(reservation);
-		System.out.println("service reservation:"+savedReservation);
 		concertSeatRepository.save(seat);
+		concertRepository.save(concert);
 		return TicketReservationToDto(savedReservation);
+	}
+
+	@Transactional
+	protected TicketWaitingResponseDto processWaitingRegistration(
+		TicketReservationRequestDto requestDto,
+		Long memberId
+	) {
+		try {
+			// 좌석 정보 조회
+			ConcertSeat seat = concertSeatRepository.findById(requestDto.getSeatId())
+				.orElseThrow(() -> new ConcertSeatNotFoundException(ErrorCode.CONCERT_SEAT_NOT_FOUND,
+					ErrorCode.CONCERT_SEAT_NOT_FOUND.getDescription()));
+
+			Concert concert = concertRepository.findById(seat.getConcert().getId())
+				.orElseThrow(() -> new ConcertNotFoundException(ErrorCode.CONCERT_NOT_FOUND,
+					ErrorCode.CONCERT_NOT_FOUND.getDescription()));
+
+			Member member = memberRepository.findById(memberId)
+				.orElseThrow(() -> new MemberNotFoundException(ErrorCode.MEMBER_NOT_FOUND,
+					ErrorCode.MEMBER_NOT_FOUND.getDescription()));
+
+			// 웨이팅 가능 조건 체크
+			concert.reserveSeatCheck();
+			// 웨이팅 등록
+			TicketWaitingResponseDto responseDto = registerWaiting(concert, member);
+			return responseDto;
+		} catch (ConcertRemainSeatExistException e) {
+			throw new ConcertRemainSeatExistException(ErrorCode.CONCERT_REMAINING_SEAT_EXIST, ErrorCode.CONCERT_REMAINING_SEAT_EXIST.getDescription());
+		} catch (Exception ex) {
+			System.out.println("error:"+ex.getMessage());
+			throw new TicketWaitingRegisterException(ErrorCode.TICKET_WAITING_ERROR, ErrorCode.TICKET_WAITING_ERROR.getDescription());
+		}
+	}
+
+	// 웨이팅 등록 로직
+	@Transactional
+	protected TicketWaitingResponseDto registerWaiting(Concert concert, Member member) {
+		// 웨이팅 번호 부여
+		Integer maxWaitingNumber = ticketWaitingRepository.findMaxWaitingNumberByConcertId(concert.getId())
+			.orElse(0);
+		Integer waitingNumber = maxWaitingNumber + 1;
+		TicketWaiting waiting = TicketWaiting.builder()
+			.concert(concert)
+			.member(member)
+			.waitingNumber(waitingNumber)
+			.status(TicketWaitingStatus.WAITING)
+			.build();
+		TicketWaiting savedWaiting = ticketWaitingRepository.save(waiting);
+
+		return TicketWaitingResponseToDto(savedWaiting,waitingNumber);
 	}
 
 	// 예약 승인
 	@Transactional
 	@Override
-	public TicketReservationResponseDto approveReservation(Long reservationId, Long memberId) {
+	public TicketReservationInfoResponseDto approveReservation(Long reservationId, Long memberId) {
 		// 티켓 정보 및 예약한 티켓 좌석 및 멤버 정보 조회
 		TicketReservation reservation = ticketReservationRepository.findById(reservationId)
 			.orElseThrow(() -> new TicketReservationNotFoundException(ErrorCode.TICKET_RESERVATION_NOT_FOUND, ErrorCode.TICKET_RESERVATION_NOT_FOUND.getDescription()));
@@ -96,9 +183,6 @@ public class TicketReservationServiceImpl implements TicketReservationService {
 		concertSeat.reserve();
 		reservation.approve();
 
-		//콘서트 예약가능좌석 수 변동
-		concert.reserveSeat();
-
 		// 상태 변경 및 DTO 반환
 		concertSeatRepository.save(concertSeat);
 		TicketReservation savedReservation = ticketReservationRepository.save(reservation);
@@ -108,7 +192,7 @@ public class TicketReservationServiceImpl implements TicketReservationService {
 
 	@Transactional
 	@Override
-	public TicketReservationResponseDto cancelReservation(
+	public TicketReservationInfoResponseDto cancelReservation(
 		Long reservationId,
 		Long memberId
 	) {
@@ -147,13 +231,23 @@ public class TicketReservationServiceImpl implements TicketReservationService {
 	}
 
 	@Override
-	public List<TicketReservationResponseDto> getMemberReservations(Long memberId) {
+	public List<TicketReservationInfoResponseDto> getMemberReservations(Long memberId) {
 		List<TicketReservation> ticketReservations =  ticketReservationRepository.findByMemberId(memberId);
 		return ticketReservations.stream().map(this::TicketReservationToDto).toList();
 	}
 
-	public TicketReservationResponseDto TicketReservationToDto(TicketReservation ticketReservation) {
-		return TicketReservationResponseDto
+	private TicketWaitingResponseDto TicketWaitingResponseToDto(TicketWaiting ticketWaiting, Integer waitingNumber) {
+		Concert ticketConcert = ticketWaiting.getConcert();
+		return TicketWaitingResponseDto.builder()
+			.concertId(ticketConcert.getId())
+			.concertName(ticketConcert.getName())
+			.waitingNumber(waitingNumber)
+			.status(ticketWaiting.getStatus().name())
+			.build();
+	}
+
+	private TicketReservationInfoResponseDto TicketReservationToDto(TicketReservation ticketReservation) {
+		return TicketReservationInfoResponseDto
 			.builder()
 			.id(ticketReservation.getId())
 			.memberInfo(MemberInfoDto
@@ -172,4 +266,5 @@ public class TicketReservationServiceImpl implements TicketReservationService {
 			.createdAt(ticketReservation.getCreatedAt().toString())
 			.build();
 	}
+
 }

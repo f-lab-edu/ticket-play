@@ -7,6 +7,7 @@ import com.flab.tiple.concert.exception.ConcertCancelTimeException;
 import com.flab.tiple.concert.exception.ConcertClosedException;
 import com.flab.tiple.concert.exception.ConcertEndTimeException;
 import com.flab.tiple.concert.exception.ConcertNotStartDateException;
+import com.flab.tiple.concert.exception.ConcertRemainSeatExistException;
 import com.flab.tiple.global.entity.BaseTime;
 import com.flab.tiple.global.exception.ErrorCode;
 
@@ -73,6 +74,10 @@ public class Concert extends BaseTime {
 	public void cancelTimeAvailableCheck(){
 		if (this.startTime.minusHours(24).isBefore(LocalDateTime.now()))
 			throw new ConcertCancelTimeException(ErrorCode.CONCERT_CANCEL_TIME_EXCEED, ErrorCode.CONCERT_CANCEL_TIME_EXCEED.getDescription());
+	}
+
+	public void reserveSeatCheck(){
+		if (remainingSeat > 0) throw new ConcertRemainSeatExistException(ErrorCode.CONCERT_REMAINING_SEAT_EXIST, ErrorCode.CONCERT_REMAINING_SEAT_EXIST.getDescription());
 	}
 
 	public void reserveSeat() {

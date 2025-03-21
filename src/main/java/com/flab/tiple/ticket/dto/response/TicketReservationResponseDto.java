@@ -1,9 +1,6 @@
 package com.flab.tiple.ticket.dto.response;
 
-
-import com.flab.tiple.concert.dto.response.ConcertSeatInfo;
-import com.flab.tiple.member.dto.response.MemberInfoDto;
-import com.flab.tiple.ticket.enums.TicketReservationStatus;
+import com.flab.tiple.ticket.enums.TicketProcessStatus;
 
 import lombok.AccessLevel;
 import lombok.Builder;
@@ -12,31 +9,24 @@ import lombok.NoArgsConstructor;
 
 @Getter
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
-public class TicketReservationResponseDto {
-	private Long id;
-	private MemberInfoDto memberInfo;
-	private ConcertSeatInfo seatInfo;
-	private TicketReservationStatus status;
-	private String createdAt;
+public class TicketReservationResponseDto<T>  {
+
+	 // 처리 결과 상태
+	private TicketProcessStatus status;
+	 // 결과 데이터 (예약 정보 또는 웨이팅 정보)
+	private T data;
 
 	@Builder
-	public TicketReservationResponseDto(Long id, MemberInfoDto memberInfo, ConcertSeatInfo seatInfo, TicketReservationStatus status, String createdAt) {
-		this.id = id;
-		this.memberInfo = memberInfo;
-		this.seatInfo = seatInfo;
+	public TicketReservationResponseDto(TicketProcessStatus status, T data) {
 		this.status = status;
-		this.createdAt = createdAt;
+		this.data = data;
 	}
 
 	@Override
 	public String toString() {
 		return "TicketReservationResponseDto{" +
-			"id=" + id +
-			", memberInfo=" + memberInfo +
-			", seatInfo=" + seatInfo +
-			", status=" + status +
-			", createdAt='" + createdAt + '\'' +
+			"status=" + status +
+			", data=" + data +
 			'}';
 	}
 }
-

@@ -180,7 +180,7 @@ jacocoTestCoverageVerification {
 // 단순화된 QueryDSL 컴파일 태스크
 task compileQuerydsl(type: JavaCompile, group: 'build') {
 	// 1. 소스 설정: 메인 소스 Java 파일 지정
-	source = sourceSets.main.java.filter { it.path.contains('/entity/') }
+	source = sourceSets.main.java
 	// 2. 클래스패스 설정: 컴파일에 필요한 의존성 경로 지정
 	classpath = configurations.compileClasspath
 	// 3. 어노테이션 프로세서 경로 설정
