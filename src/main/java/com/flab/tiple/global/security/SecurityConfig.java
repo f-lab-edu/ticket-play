@@ -1,5 +1,7 @@
 package com.flab.tiple.global.security;
 
+import java.util.stream.Stream;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.MediaType;
@@ -8,11 +10,13 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configuration.WebSecurityCustomizer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.flab.tiple.global.exception.ErrorCode;
@@ -60,13 +64,39 @@ public class SecurityConfig {
 	private final JwtTokenProvider jwtTokenProvider;
 	private final JwtTokenUtil jwtTokenUtil;
 
+	private static final String[] PERMIT_ALL_PATTERNS = new String[] {
+		"/v3/api-docs/**",
+		"/swagger-ui/**",
+		"/swagger-ui.html",
+		"/swagger-resources/**",
+		"/webjars/**",
+		"/api/members/signup",
+		"/api/auth/login",
+		"/api/concerts"
+	};
+
+	@Bean
+	public WebSecurityCustomizer webSecurityCustomizer() {
+		return (web) -> web.ignoring().requestMatchers(
+			"/v3/api-docs/**",
+			"/swagger-ui/**",
+			"/swagger-ui.html",
+			"/swagger-resources/**",
+			"/webjars/**"
+		);
+	}
+
 	@Bean
 	public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
 		http
 			//CSRF(Cross-Site Request Forgery)
 			.csrf(csrf -> csrf.disable()) // REST API에서는 CSRF 보호가 필요 없음
 			.authorizeHttpRequests(auth -> auth
-				.requestMatchers("/api/members/signup", "/api/auth/login","/api/concerts","/api/concerts/**").permitAll() // 로그인 엔드포인트 추가
+				.requestMatchers(
+					Stream.of(PERMIT_ALL_PATTERNS)
+						.map(AntPathRequestMatcher::antMatcher)
+						.toArray(AntPathRequestMatcher[]::new)
+				).permitAll() // 로그인 엔드포인트 추가
 				.anyRequest().authenticated()
 			)
 			.exceptionHandling(exception -> exception
