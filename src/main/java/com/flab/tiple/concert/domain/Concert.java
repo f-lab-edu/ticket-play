@@ -3,7 +3,12 @@ package com.flab.tiple.concert.domain;
 import java.time.LocalDateTime;
 
 import com.flab.tiple.concert.enums.ConcertStatus;
+import com.flab.tiple.concert.exception.ConcertCancelTimeException;
+import com.flab.tiple.concert.exception.ConcertClosedException;
+import com.flab.tiple.concert.exception.ConcertEndTimeException;
+import com.flab.tiple.concert.exception.ConcertNotStartDateException;
 import com.flab.tiple.global.entity.BaseTime;
+import com.flab.tiple.global.exception.ErrorCode;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -58,6 +63,25 @@ public class Concert extends BaseTime {
 
 	@Column(nullable = false, columnDefinition = "TEXT")
 	private String concertSeatInfo;
+
+	public void reservationStatusCheck() {
+		if(this.status != ConcertStatus.OPEN) throw new ConcertClosedException(ErrorCode.CONCERT_CLOSED, ErrorCode.CONCERT_CLOSED.getDescription());
+		if(this.reservationStartTime.isAfter(LocalDateTime.now())) throw new ConcertNotStartDateException(ErrorCode.CONCERT_NOT_START_TIME_RESERVATION, ErrorCode.CONCERT_NOT_START_TIME_RESERVATION.getDescription());
+		if(this.reservationEndTime.isBefore(LocalDateTime.now())) throw new ConcertEndTimeException(ErrorCode.CONCERT_LIMIT_END_TIME_RESERVATION, ErrorCode.CONCERT_LIMIT_END_TIME_RESERVATION.getDescription());
+	}
+
+	public void cancelTimeAvailableCheck(){
+		if (this.startTime.minusHours(24).isBefore(LocalDateTime.now()))
+			throw new ConcertCancelTimeException(ErrorCode.CONCERT_CANCEL_TIME_EXCEED, ErrorCode.CONCERT_CANCEL_TIME_EXCEED.getDescription());
+	}
+
+	public void reserveSeat() {
+		this.remainingSeat--;
+	}
+
+	public void cancelSeat(){
+		this.remainingSeat++;
+	}
 
 	@Builder
 	public Concert(String name, String artistName, LocalDateTime startTime, LocalDateTime endTime,

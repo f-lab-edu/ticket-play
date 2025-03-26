@@ -2,8 +2,11 @@ package com.flab.tiple.ticket.domain;
 
 import com.flab.tiple.concert.domain.ConcertSeat;
 import com.flab.tiple.global.entity.BaseTime;
+import com.flab.tiple.global.exception.ErrorCode;
 import com.flab.tiple.member.domain.Member;
+import com.flab.tiple.member.exception.MemberNotMatchException;
 import com.flab.tiple.ticket.enums.TicketReservationStatus;
+import com.flab.tiple.ticket.exception.TicketReservationStatusException;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -40,6 +43,28 @@ public class TicketReservation extends BaseTime {
 	@Column(name = "status", nullable = false)
 	private TicketReservationStatus status;
 
+	public void checkMatchMember(Member member){
+		if(!this.member.equals(member)) throw new MemberNotMatchException(ErrorCode.MEMBER_NOT_MATCH, ErrorCode.MEMBER_NOT_MATCH.getDescription());
+	}
+
+	public void checkStatus(){
+		if(this.status != TicketReservationStatus.PENDING) throw new TicketReservationStatusException(ErrorCode.TICKET_RESERVATION_NOT_POSSIBLE_STATUS, ErrorCode.TICKET_RESERVATION_NOT_POSSIBLE_STATUS.getDescription());
+	}
+
+	public void checkCancelPossibleStatus(){
+		if (this.getStatus() != TicketReservationStatus.PENDING
+			&& this.getStatus() != TicketReservationStatus.APPROVED) {
+			throw new TicketReservationStatusException(ErrorCode.TICKET_RESERVATION_NOT_CANCEL_STATUS, ErrorCode.TICKET_RESERVATION_NOT_CANCEL_STATUS.getDescription());
+		}
+	}
+
+	public void approve(){
+		this.status = TicketReservationStatus.APPROVED;
+	}
+
+	public void cancel(){
+		this.status = TicketReservationStatus.CANCELLED;
+	}
 
 	@Builder
 	public TicketReservation(Member member, ConcertSeat seat,TicketReservationStatus status) {
