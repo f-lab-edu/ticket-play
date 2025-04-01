@@ -41,6 +41,14 @@ public class LoginCheckAspect {
 	private final JwtTokenProvider jwtTokenProvider;
 	private final JwtTokenUtil jwtTokenUtil;
 
+	// 현재 로그인된 회원의 ID를 저장할 ThreadLocal
+	private static final ThreadLocal<Long> currentMemberId = new ThreadLocal<>();
+
+	// 현재 로그인된 회원 ID를 가져오는 static 메서드 (서비스나 다른 곳에서 사용)
+	public static Long getCurrentMemberId() {
+		return currentMemberId.get();
+	}
+
 	/**
 	 * ProceedingJoinPoint의 역할
 	 * AOP가 가로챈 메서드에 대한 정보를 제공함
@@ -49,34 +57,44 @@ public class LoginCheckAspect {
 	 */
 	@Around("@annotation(loginCheck)")
 	public Object checkLoginStatus(ProceedingJoinPoint joinPoint, LoginCheck loginCheck) throws Throwable {
-		// 로그인 필수 설정 확인
-		if (loginCheck.required()) {
-			// 현재 인증 컨텍스트에서 인증 정보 가져오기
-			Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+		try {
+			// 로그인 필수 설정 확인
+			if (loginCheck.required()) {
+				// 현재 인증 컨텍스트에서 인증 정보 가져오기
+				Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
 
-			// 인증 정보 검증
-			// 인증 객체 자체가 존재하지 않거나 인증되지 않은 사용자일경우 예외발생
-			if (authentication == null ||
-				!authentication.isAuthenticated()) {
-				throw new JwtUnauthorizedException(ErrorCode.UNAUTHORIZED, ErrorCode.UNAUTHORIZED.getDescription());
+				// 인증 정보 검증
+				// 인증 객체 자체가 존재하지 않거나 인증되지 않은 사용자일경우 예외발생
+				if (authentication == null ||
+					!authentication.isAuthenticated()) {
+					throw new JwtUnauthorizedException(ErrorCode.UNAUTHORIZED, ErrorCode.UNAUTHORIZED.getDescription());
+				}
+
+				// 현재 HTTP 요청 가져오기
+				HttpServletRequest request =
+					((ServletRequestAttributes)RequestContextHolder.currentRequestAttributes())
+						.getRequest();
+
+				// 토큰 추출 및 검증
+				String token = jwtTokenUtil.getJwtFromRequest(request);
+
+				// 토큰 유효성 검사
+				if (token == null || !jwtTokenProvider.validateToken(token)) {
+					throw new JwtUnauthorizedException(ErrorCode.UNAUTHORIZED, ErrorCode.UNAUTHORIZED.getDescription());
+				}
+
+				// 토큰에서 회원 ID 추출 (JwtTokenProvider에 이 기능 추가 필요)
+				Long memberId = jwtTokenProvider.getMemberIdFromToken(token);
+
+				// ThreadLocal에 회원 ID 저장
+				currentMemberId.set(memberId);
 			}
 
-			// 현재 HTTP 요청 가져오기
-			HttpServletRequest request =
-				((ServletRequestAttributes) RequestContextHolder.currentRequestAttributes())
-					.getRequest();
-
-			// 토큰 추출 및 검증
-			String token = jwtTokenUtil.getJwtFromRequest(request);
-
-			// 토큰 유효성 검사
-			if (token == null || !jwtTokenProvider.validateToken(token)) {
-				throw new JwtUnauthorizedException(ErrorCode.UNAUTHORIZED, ErrorCode.UNAUTHORIZED.getDescription());
-			}
+			//원래 메서드 호출
+			return joinPoint.proceed();
+		} finally {
+			// 스레드 로컬 초기화 (메모리 누수 방지)
+			currentMemberId.remove();
 		}
-
-
-		//원래 메서드 호출
-		return joinPoint.proceed();
 	}
 }

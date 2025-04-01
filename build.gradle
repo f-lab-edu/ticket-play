@@ -20,11 +20,6 @@ jacoco {
 	reportsDirectory = layout.buildDirectory.dir("reports/jacoco")
 }
 
-test {
-	useJUnitPlatform()
-	finalizedBy jacocoTestReport // 테스트 후 JaCoCo 리포트 생성
-}
-
 configurations {
 	asciidoctorExtensions // Asciidoctor 플러그인을 위한 설정. Spring REST Docs에서 Asciidoctor를 사용할 때 필요함.
 	compileOnly {
@@ -72,6 +67,41 @@ dependencies {
 	annotationProcessor 'jakarta.annotation:jakarta.annotation-api'
 	annotationProcessor 'jakarta.persistence:jakarta.persistence-api'
 
+	// 스프링 swagger
+	implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0'
+	// SpringDoc과 호환되는 Spring Web 버전으로 명시
+	implementation 'org.springframework:spring-web:6.1.5'
+	implementation 'org.springframework:spring-webmvc:6.1.5'
+}
+
+//ext {} 블록 (전역 변수 설정)
+ext {
+	// 아래서 사용할 변수 선언
+	snippetsDir = file('build/generated-snippets')
+}
+
+// QueryDSL 설정
+def querydslDir = "src/main/generated/querydsl"
+
+sourceSets {
+	main {
+		java {
+			srcDirs = ['src/main/java']  // 기본 소스 디렉토리 명시적 설정
+			srcDirs += [querydslDir]
+		}
+	}
+	test {
+		java {
+			srcDirs = ['src/test/java']
+		}
+	}
+}
+
+// 통합된 test 블록 (이전에 중복되어 있던 것을 하나로 통합)
+test {
+	outputs.dir snippetsDir
+	useJUnitPlatform()
+	finalizedBy jacocoTestReport // 테스트 후 JaCoCo 리포트 생성
 }
 
 //JaCoCo 설정
@@ -81,20 +111,6 @@ jacocoTestReport {
 		csv.required = false //csv.required = false → CSV 리포트는 필요 없음
 		html.required = true //HTML 리포트 생성 (개발자가 보기 편하게)
 	}
-}
-
-//ext {} 블록 (전역 변수 설정)
-ext {
-	// 아래서 사용할 변수 선언
-	snippetsDir = file('build/generated-snippets')
-}
-
-//test {} 블록 (테스트 설정)
-test {
-	//outputs.dir snippetsDir → 테스트 실행 시, 문서 조각(snippets)이 build/generated-snippets에 저장됨
-	outputs.dir snippetsDir
-	//JUnit 5 (JUnit Jupiter)를 사용.
-	useJUnitPlatform()
 }
 
 // asciidoctor 설정(Spring REST Docs 관련 설정)
@@ -161,46 +177,39 @@ jacocoTestCoverageVerification {
 	}
 }
 
-// QueryDSL 설정
-def querydslDir = "src/main/generated/querydsl"
-
-sourceSets {
-	main {
-		java {
-			srcDirs += [querydslDir]
-		}
-	}
-}
-
-// 4. 단순화된 QueryDSL 컴파일 태스크
+// 단순화된 QueryDSL 컴파일 태스크
 task compileQuerydsl(type: JavaCompile, group: 'build') {
+	// 1. 소스 설정: 메인 소스 Java 파일 지정
 	source = sourceSets.main.java
+	// 2. 클래스패스 설정: 컴파일에 필요한 의존성 경로 지정
 	classpath = configurations.compileClasspath
+	// 3. 어노테이션 프로세서 경로 설정
 	options.annotationProcessorPath = configurations.annotationProcessor
+	// 4. 컴파일러 옵션 설정
 	options.compilerArgs = [
-			"-proc:only",
-			"-processor", "com.querydsl.apt.jpa.JPAAnnotationProcessor"
+			"-proc:only",           // 오직 어노테이션 프로세싱만 수행
+			"-processor", "com.querydsl.apt.jpa.JPAAnnotationProcessor" // QueryDSL 전용 어노테이션 프로세서 지정
 	]
-	destinationDir = file("$buildDir")
-	options.compilerArgs += ["-s", querydslDir]
+	// 5. 생성된 소스 파일의 출력 디렉토리 지정
+	destinationDir = file(querydslDir)
 
+	// 6. 태스크 실행 전 수행: 기존 Q타입 클래스 디렉토리 삭제 및 재생성
 	doFirst {
 		file(querydslDir).deleteDir()
 		file(querydslDir).mkdirs()
 	}
 }
 
-
+// 클래스 출력 디렉토리를 명확하게 설정
 tasks.withType(JavaCompile) {
 	options.annotationProcessorGeneratedSourcesDirectory = file(querydslDir)
 }
 
+// 추가: 클린 태스크 강화
 clean {
-	delete querydslDir
-}
-
-//테스트 플랫폼 설정
-tasks.named('test') {
-	//테스트 실행 시 JUnit 5(JUnit Jupiter) 사용
-	useJUnitPlatform()
+	doFirst {
+		delete querydslDir
+		delete "${buildDir}"
+		delete file('out')  // IDE가 생성하는 출력 디렉토리도 정리
+	}
 }
