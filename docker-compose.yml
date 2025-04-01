@@ -1,0 +1,75 @@
+version: '3.8'
+
+services:
+  server:
+    container_name: spring-server
+    # Dockerfile기반으로 build
+    build:
+      context: .
+      dockerfile: Dockerfile
+    # 환경변수 설정
+    environment:
+      - SPRING_PROFILES_ACTIVE=local-docker
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/tiple?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      - SPRING_DATASOURCE_USERNAME=tiple
+      - SPRING_DATASOURCE_PASSWORD=0000
+    ports:
+      - "8080:8080"
+    # mysql이 제대로 실행되면 실행
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  # MySQL 서비스
+  mysql:
+    image: mysql:8.0.32
+    container_name: mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root123
+      MYSQL_DATABASE: tiple
+      MYSQL_USER: tiple
+      MYSQL_PASSWORD: 0000
+    command: --default-authentication-plugin=mysql_native_password
+    volumes:
+      # - mysql-data:/var/lib/mysql # MySQL 데이터 유지 (mysql-data) → 컨테이너가 재시작되어도 데이터 유지됨.
+      - ./mysql/init:/docker-entrypoint-initdb.d
+      - ./mysql/config:/etc/mysql/conf.d
+    ports:
+      - "3306:3306"
+    # MySQL이 정상적으로 실행되는지 확인하는 healthcheck 설정.
+    # mysqladmin ping을 실행하여 MySQL이 실행 중인지 확인. -> 10초마다 체크, 5초 동안 응답 없으면 실패 처리, 최대 5회 재시도.
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p0000"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+
+  # Nginx 서비스
+  nginx:
+    image: nginx:latest
+    container_name: nginx-server
+    # 왼쪽 포트 (80): 호스트 시스템의 포트 번호
+    # 오른쪽 포트 (80): nginx 컨테이너 내의 포트 번호
+    # **"80:80"**은 호스트의 포트 80을 Nginx 컨테이너의 포트 80으로 연결한다는 의미.
+    # 즉, 외부에서 서버의 포트 80으로 접속하면 Nginx 컨테이너의 포트 80으로 요청이 전달.
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx/conf.d:/etc/nginx/conf.d
+    depends_on:
+      - server
+    networks:
+      - app-network
+
+# app-network라는 브리지 네트워크를 생성하여, 모든 서비스가 동일한 네트워크에서 통신할 수 있도록 함
+networks:
+  app-network:
+    driver: bridge
+
+# mysql-data라는 볼륨을 생성하여 MySQL 데이터가 컨테이너가 종료되더라도 유지되도록 함.
+#volumes:
+#  mysql-data:

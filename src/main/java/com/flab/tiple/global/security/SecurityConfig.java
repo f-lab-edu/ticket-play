@@ -72,7 +72,8 @@ public class SecurityConfig {
 		"/webjars/**",
 		"/api/members/signup",
 		"/api/auth/login",
-		"/api/concerts"
+		"/api/concerts",
+		"/api/concerts/**"
 	};
 
 	@Bean
