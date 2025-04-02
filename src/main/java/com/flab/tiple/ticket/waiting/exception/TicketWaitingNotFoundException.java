@@ -1,0 +1,10 @@
+package com.flab.tiple.ticket.waiting.exception;
+
+import com.flab.tiple.global.exception.BusinessException;
+import com.flab.tiple.global.exception.ErrorCode;
+
+public class TicketWaitingNotFoundException  extends BusinessException {
+	public TicketWaitingNotFoundException(ErrorCode errorCode, String message) {
+		super(errorCode, message);
+	}
+}
