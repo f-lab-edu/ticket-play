@@ -1,14 +1,14 @@
 # 공통 설정
 spring:
   profiles:
-    active: local
+    active: ${SPRING_PROFILES_ACTIVE:local}
   jpa:
     properties:
       hibernate:
         format_sql: true # Hibernate가 생성하는 SQL 쿼리를 사람이 읽기 쉬운 형태로 포맷팅
 
 server:
-  port: ${port:5003}
+  port: ${PORT:8080}
   forward-headers-strategy: native # 서버가 요청 헤더를 어떻게 처리할지 지정
 
 logging.level:
@@ -16,11 +16,11 @@ logging.level:
   org.hibernate.type: trace
 
 jwt:
-  secret: ${jwt.secret}
+  secret: ${JWT_SECRET:default_dev_secret_key}
   expiration-ms: 86400000
 
 ---
-# 로컬 개발 환경
+# 로컬 개발 환경 (H2 데이터베이스 사용)
 spring:
   config:
     activate:
@@ -41,3 +41,24 @@ spring:
       mode: always
       schema-locations: classpath:data/schema.sql
       data-locations: classpath:data/data.sql
+
+---
+# Docker 환경 (MySQL 데이터베이스 사용)
+spring:
+  config:
+    activate:
+      on-profile: local-docker
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://mysql:3306/tiple?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}
+    username: ${SPRING_DATASOURCE_USERNAME:tiple}
+    password: ${SPRING_DATASOURCE_PASSWORD:0000}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+  jpa:
+    hibernate:
+      ddl-auto: create
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQL8Dialect
+  sql:
+    init:
+      mode: always

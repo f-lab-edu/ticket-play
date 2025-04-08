@@ -72,6 +72,9 @@ dependencies {
 	// SpringDoc과 호환되는 Spring Web 버전으로 명시
 	implementation 'org.springframework:spring-web:6.1.5'
 	implementation 'org.springframework:spring-webmvc:6.1.5'
+
+	//mysql 커넥터 추가
+	implementation 'mysql:mysql-connector-java:8.0.32'
 }
 
 //ext {} 블록 (전역 변수 설정)

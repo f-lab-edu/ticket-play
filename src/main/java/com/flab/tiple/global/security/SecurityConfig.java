@@ -4,6 +4,7 @@ import java.util.stream.Stream;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.context.annotation.Profile;
 import org.springframework.http.MediaType;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -55,6 +56,7 @@ import lombok.RequiredArgsConstructor;
  *  4. 선택된 SecurityFilterChain의 필터들을 순서대로 실행
  *  5. 모든 보안 필터를 통과한 후, 남은 서블릿 필터 체인으로 요청 전달
  */
+@Profile({"local", "local-docker"})
 @Configuration
 @EnableWebSecurity
 @RequiredArgsConstructor
@@ -72,7 +74,8 @@ public class SecurityConfig {
 		"/webjars/**",
 		"/api/members/signup",
 		"/api/auth/login",
-		"/api/concerts"
+		"/api/concerts",
+		"/api/concerts/**"
 	};
 
 	@Bean
