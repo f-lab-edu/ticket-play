@@ -6,6 +6,6 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import com.flab.tiple.ticket.waiting.domain.TicketWaiting;
 
-public interface TicketWaitingRepository  extends JpaRepository<TicketWaiting, Long> {
+public interface TicketWaitingRepository  extends JpaRepository<TicketWaiting, Long>, TicketWaitingRepositoryQueryDslCustom  {
 	List<TicketWaiting> findByMemberIdOrderByCreatedAtDesc(Long memberId);
 }
