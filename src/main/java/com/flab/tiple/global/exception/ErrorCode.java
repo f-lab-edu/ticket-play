@@ -30,11 +30,11 @@ public enum ErrorCode {
     TICKET_WAITING_INVALID_WAITING_STATUS("티켓 웨이팅 상태가 잘못되었습니다",400),
 
     // 인증관련에러
-    UNAUTHORIZED("UNAUTHORIZED", 401),
-    TOKEN_EXPIRED("TOKEN_EXPIRED.",401),
-    TOKEN_INVALID("TOKEN_INVALID.",401),
-    TOKEN_MALFORMED("TOKEN_MALFORMED.",401),
-    TOKEN_ERROR("TOKEN_ERROR.",401);
+    UNAUTHORIZED("인증실패", 401),
+    TOKEN_EXPIRED("토큰이 만료되었습니다.",401),
+    TOKEN_INVALID("유효하지 않은 토큰입니다.",401),
+    TOKEN_MALFORMED("잘못된 형식의 토큰입니다.",401),
+    TOKEN_ERROR("토큰 에러입니다.",401);
 
     private final String description;
     private final int status;
