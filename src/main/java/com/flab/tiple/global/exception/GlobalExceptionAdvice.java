@@ -2,6 +2,10 @@ package com.flab.tiple.global.exception;
 
 import com.flab.tiple.global.response.ApiResponse;
 import lombok.extern.slf4j.Slf4j;
+
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
@@ -35,7 +39,12 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 @RestControllerAdvice
 public class GlobalExceptionAdvice {
 
-
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<ApiResponse<?>> handleAuthenticationException(AuthenticationException ex) {
+        // 여기에서 오류 메시지를 하드코딩하여 테스트
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+            .body(new ApiResponse<>(401, "Authentication failed", null));
+    }
     @ExceptionHandler(BusinessException.class)
     public ApiResponse<ErrorResponse> handleBusinessException(BusinessException e) {
         return createErrorResponse(e, e.getErrorCode());

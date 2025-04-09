@@ -1,8 +1,3 @@
-drop table concert;
-drop table concert_seat;
-drop table member;
-drop table ticket_reservation;
-drop table ticket_waiting;
 
 
 CREATE TABLE IF NOT EXISTS concert  (
