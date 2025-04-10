@@ -7,12 +7,15 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    # 환경변수 설정
+    # 환경변수 설정 - 인코딩 설정 추가
     environment:
       - SPRING_PROFILES_ACTIVE=local-docker
-      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/tiple?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/tiple?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=UTF-8
       - SPRING_DATASOURCE_USERNAME=tiple
       - SPRING_DATASOURCE_PASSWORD=0000
+      - LANG=C.UTF-8
+      - LC_ALL=C.UTF-8
+      - JAVA_OPTS=-Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8
     ports:
       - "8080:8080"
     # mysql이 제대로 실행되면 실행
@@ -31,7 +34,7 @@ services:
       MYSQL_DATABASE: tiple
       MYSQL_USER: tiple
       MYSQL_PASSWORD: 0000
-    command: --default-authentication-plugin=mysql_native_password
+    command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
     volumes:
       # - mysql-data:/var/lib/mysql # MySQL 데이터 유지 (mysql-data) → 컨테이너가 재시작되어도 데이터 유지됨.
       - ./mysql/init:/docker-entrypoint-initdb.d
@@ -60,6 +63,10 @@ services:
       - "80:80"
     volumes:
       - ./nginx/conf.d:/etc/nginx/conf.d
+      # 추가: Nginx 기본 설정 파일도 마운트
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
+    environment:
+      - NGINX_ENTRYPOINT_QUIET_LOGS=1
     depends_on:
       - server
     networks:

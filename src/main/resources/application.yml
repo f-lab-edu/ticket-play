@@ -10,6 +10,15 @@ spring:
 server:
   port: ${PORT:8080}
   forward-headers-strategy: native # 서버가 요청 헤더를 어떻게 처리할지 지정
+  servlet:
+    encoding:
+      charset: UTF-8
+      force: true
+      enabled: true
+      force-request: true
+      force-response: true
+  tomcat:
+    uri-encoding: UTF-8
 
 logging.level:
   org.hibernate.SQL: debug
@@ -55,10 +64,12 @@ spring:
     driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     hibernate:
-      ddl-auto: create
+      ddl-auto: none
     properties:
       hibernate:
         dialect: org.hibernate.dialect.MySQL8Dialect
   sql:
     init:
       mode: always
+      schema-locations: classpath:data/schema.sql
+      data-locations: classpath:data/data.sql
