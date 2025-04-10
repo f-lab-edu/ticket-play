@@ -40,9 +40,11 @@ import com.flab.tiple.ticket.reservation.domain.TicketReservation;
 import com.flab.tiple.ticket.reservation.dto.request.TicketReservationRequestDto;
 import com.flab.tiple.ticket.reservation.dto.response.TicketReservationInfoResponseDto;
 import com.flab.tiple.ticket.reservation.dto.response.TicketReservationResponseDto;
+import com.flab.tiple.ticket.reservation.dto.response.TicketReservationServiceFindInfo;
 import com.flab.tiple.ticket.reservation.enums.TicketProcessStatus;
 import com.flab.tiple.ticket.reservation.enums.TicketReservationStatus;
 import com.flab.tiple.ticket.reservation.exception.TicketReservationStatusException;
+import com.flab.tiple.ticket.reservation.initializer.StatusTransitionJsonInitializer;
 import com.flab.tiple.ticket.reservation.repository.TicketReservationRepository;
 import com.flab.tiple.ticket.reservation.service.TicketReservationServiceImpl;
 import com.flab.tiple.ticket.waiting.domain.TicketWaiting;
@@ -83,9 +85,11 @@ public class TicketReservationServiceTest {
 	private TicketReservationRequestDto requestDto;
 	private Long memberId = 1L;
 	private TicketWaitingResponseDto mockWaitingResponse;
+	private TicketReservationServiceFindInfo ticketReservationServiceFindInfo;
 
 	@BeforeEach
 	void setUp() {
+		StatusTransitionJsonInitializer.initializeForTest();
 		// 멤버 생성
 		member = Member.builder()
 			.email("test@example.com")
@@ -130,6 +134,13 @@ public class TicketReservationServiceTest {
 			.build();
 		ReflectionTestUtils.setField(ticketReservation, "id", 1L);
 		ReflectionTestUtils.setField(ticketReservation, "createdAt", LocalDateTime.now());
+
+		ticketReservationServiceFindInfo = TicketReservationServiceFindInfo.builder()
+			.member(member)
+			.concertSeat(concertSeat)
+			.concert(concert)
+			.ticketReservation(ticketReservation)
+			.build();
 
 		ticketWaiting = TicketWaiting.builder()
 			.concert(concert)
@@ -254,7 +265,7 @@ public class TicketReservationServiceTest {
 			when(ticketWaitingRepository.save(any(TicketWaiting.class))).thenReturn(ticketWaiting);
 
 			// When
-			TicketWaitingResponseDto result = ticketReservationService.registerWaiting(concert, member);
+			TicketWaitingResponseDto result = ticketReservationService.registerWaiting(ticketReservationServiceFindInfo);
 
 			// Then
 			assertThat(result).isNotNull();
@@ -273,7 +284,7 @@ public class TicketReservationServiceTest {
 			when(ticketWaitingRepository.save(any(TicketWaiting.class))).thenReturn(ticketWaiting);
 
 			// When
-			TicketWaitingResponseDto result = ticketReservationService.registerWaiting(concert, member);
+			TicketWaitingResponseDto result = ticketReservationService.registerWaiting(ticketReservationServiceFindInfo);
 
 			// Then
 			assertThat(result).isNotNull();

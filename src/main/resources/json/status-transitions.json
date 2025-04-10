@@ -1,0 +1,6 @@
+{
+  "statusTransitions": {
+    "APPROVED": ["PENDING"],
+    "CANCELLED": ["PENDING", "APPROVED"]
+  }
+}
