@@ -6,7 +6,11 @@ spring:
     properties:
       hibernate:
         format_sql: true # Hibernate가 생성하는 SQL 쿼리를 사람이 읽기 쉬운 형태로 포맷팅
-
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "prometheus"
 server:
   port: ${PORT:8080}
   forward-headers-strategy: native # 서버가 요청 헤더를 어떻게 처리할지 지정

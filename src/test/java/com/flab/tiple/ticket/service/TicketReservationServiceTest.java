@@ -172,8 +172,10 @@ public class TicketReservationServiceTest {
 		void requestReservationSeatAvailableSuccess() {
 			when(ticketReservationRepository.save(any(TicketReservation.class))).thenReturn(ticketReservation);
 			when(memberRepository.findById(anyLong())).thenReturn(Optional.of(member));
-			when(concertRepository.findById(anyLong())).thenReturn(Optional.ofNullable(concert));
-			when(concertSeatRepository.findById(anyLong())).thenReturn(Optional.ofNullable(concertSeat));
+			when(concertSeatRepository.findByIdWithPessimisticLock(eq(concertSeat.getId())))
+				.thenReturn(Optional.of(concertSeat));
+			when(concertRepository.findByIdWithPessimisticLock(eq(concert.getId())))
+				.thenReturn(Optional.of(concert));
 
 			// When
 			TicketReservationResponseDto<?> result = ticketReservationService.requestReservation(requestDto, memberId);
@@ -192,7 +194,7 @@ public class TicketReservationServiceTest {
 		@Test
 		@DisplayName("좌석 정보가 없을 때 예외 발생")
 		void tryReserveSeatSeatNotFoundThrowsException() {
-			when(concertSeatRepository.findById(1L)).thenReturn(Optional.empty());
+			when(concertSeatRepository.findByIdWithPessimisticLock(1L)).thenReturn(Optional.empty());
 
 			assertThrows(ConcertSeatNotFoundException.class, () ->
 				ticketReservationService.tryReserveSeat(requestDto, memberId)
@@ -204,8 +206,10 @@ public class TicketReservationServiceTest {
 		void tryReserveSeatValidRequestSuccess() {
 			when(ticketReservationRepository.save(any(TicketReservation.class))).thenReturn(ticketReservation);
 			when(memberRepository.findById(anyLong())).thenReturn(Optional.of(member));
-			when(concertRepository.findById(anyLong())).thenReturn(Optional.ofNullable(concert));
-			when(concertSeatRepository.findById(anyLong())).thenReturn(Optional.ofNullable(concertSeat));
+			when(concertSeatRepository.findByIdWithPessimisticLock(eq(concertSeat.getId())))
+				.thenReturn(Optional.of(concertSeat));
+			when(concertRepository.findByIdWithPessimisticLock(eq(concert.getId())))
+				.thenReturn(Optional.of(concert));
 
 			// When
 			TicketReservationInfoResponseDto result = ticketReservationService.tryReserveSeat(requestDto, memberId);
@@ -227,10 +231,13 @@ public class TicketReservationServiceTest {
 		@Test
 		@DisplayName("웨이팅 리스트 등록 성공")
 		void processWaitingRegistrationSuccess() {
-			when(concertSeatRepository.findById(anyLong())).thenReturn(Optional.of(concertSeat));
-			when(concertRepository.findById(anyLong())).thenReturn(Optional.of(concert));
+			when(concertSeatRepository.findByIdWithPessimisticLock(anyLong())).thenReturn(Optional.of(concertSeat));
+			when(concertRepository.findByIdWithPessimisticLock(anyLong())).thenReturn(Optional.of(concert));
 			when(memberRepository.findById(anyLong())).thenReturn(Optional.of(member));
 			when(ticketWaitingRepository.save(any(TicketWaiting.class))).thenReturn(ticketWaiting);
+			when(ticketReservationRepository.findByIdWithPessimisticLock(anyLong()))
+				.thenReturn(Optional.of(ticketReservation));
+
 			ReflectionTestUtils.setField(concert, "remainingSeat", 0);
 			// When
 			TicketWaitingResponseDto result = ticketReservationService.processWaitingRegistration(requestDto, memberId);
@@ -306,9 +313,9 @@ public class TicketReservationServiceTest {
 			ReflectionTestUtils.setField(concert, "status", ConcertStatus.CLOSED);
 
 			// 리포지토리 모킹
-			when(concertSeatRepository.findById(anyLong()))
+			when(concertSeatRepository.findByIdWithPessimisticLock(eq(concertSeat.getId())))
 				.thenReturn(Optional.of(concertSeat));
-			when(concertRepository.findById(anyLong()))
+			when(concertRepository.findByIdWithPessimisticLock(eq(concert.getId())))
 				.thenReturn(Optional.of(concert));
 			when(memberRepository.findById(anyLong()))
 				.thenReturn(Optional.of(member));
@@ -327,9 +334,9 @@ public class TicketReservationServiceTest {
 			ReflectionTestUtils.setField(concert, "reservationStartTime", LocalDateTime.now().plusDays(1));
 
 			// 리포지토리 모킹
-			when(concertSeatRepository.findById(anyLong()))
+			when(concertSeatRepository.findByIdWithPessimisticLock(eq(concertSeat.getId())))
 				.thenReturn(Optional.of(concertSeat));
-			when(concertRepository.findById(anyLong()))
+			when(concertRepository.findByIdWithPessimisticLock(eq(concert.getId())))
 				.thenReturn(Optional.of(concert));
 			when(memberRepository.findById(anyLong()))
 				.thenReturn(Optional.of(member));
@@ -348,9 +355,9 @@ public class TicketReservationServiceTest {
 			ReflectionTestUtils.setField(concert, "reservationEndTime", LocalDateTime.now().minusDays(1));
 
 			// 리포지토리 모킹
-			when(concertSeatRepository.findById(anyLong()))
+			when(concertSeatRepository.findByIdWithPessimisticLock(eq(concertSeat.getId())))
 				.thenReturn(Optional.of(concertSeat));
-			when(concertRepository.findById(anyLong()))
+			when(concertRepository.findByIdWithPessimisticLock(eq(concert.getId())))
 				.thenReturn(Optional.of(concert));
 			when(memberRepository.findById(anyLong()))
 				.thenReturn(Optional.of(member));
@@ -371,9 +378,11 @@ public class TicketReservationServiceTest {
 				.build();
 			ReflectionTestUtils.setField(differentMember, "id", 2L);
 			// 리포지토리 모킹
-			when(ticketReservationRepository.findById(anyLong()))
+			when(ticketReservationRepository.findByIdWithPessimisticLock(anyLong()))
 				.thenReturn(Optional.of(ticketReservation));
-			when(concertRepository.findById(anyLong()))
+			when(concertSeatRepository.findByIdWithPessimisticLock(eq(concertSeat.getId())))
+				.thenReturn(Optional.of(concertSeat));
+			when(concertRepository.findByIdWithPessimisticLock(eq(concert.getId())))
 				.thenReturn(Optional.of(concert));
 			when(memberRepository.findById(anyLong()))
 				.thenReturn(Optional.of(differentMember));
@@ -391,9 +400,11 @@ public class TicketReservationServiceTest {
 			ReflectionTestUtils.setField(concert, "reservationEndTime", LocalDateTime.now().plusDays(3));
 
 			// 리포지토리 모킹
-			when(ticketReservationRepository.findById(anyLong()))
+			when(ticketReservationRepository.findByIdWithPessimisticLock(anyLong()))
 				.thenReturn(Optional.of(ticketReservation));
-			when(concertRepository.findById(anyLong()))
+			when(concertSeatRepository.findByIdWithPessimisticLock(eq(concertSeat.getId())))
+				.thenReturn(Optional.of(concertSeat));
+			when(concertRepository.findByIdWithPessimisticLock(eq(concert.getId())))
 				.thenReturn(Optional.of(concert));
 			when(memberRepository.findById(anyLong()))
 				.thenReturn(Optional.of(member));
@@ -417,9 +428,13 @@ public class TicketReservationServiceTest {
 				LocalDateTime.now().plusDays(2)); // 콘서트 시작 시간을 충분히 미래로 설정
 
 			// 리포지토리 모킹
-			when(ticketReservationRepository.findById(anyLong()))
+			// 리포지토리 모킹 - 순서와 ID 일치 확인
+			when(ticketReservationRepository.findByIdWithPessimisticLock(anyLong()))
 				.thenReturn(Optional.of(ticketReservation));
-			when(concertRepository.findById(anyLong()))
+			// 좌석 ID를 명시적으로 지정하여 모킹
+			when(concertSeatRepository.findByIdWithPessimisticLock(eq(concertSeat.getId())))
+				.thenReturn(Optional.of(concertSeat));
+			when(concertRepository.findByIdWithPessimisticLock(eq(concert.getId())))
 				.thenReturn(Optional.of(concert));
 			when(memberRepository.findById(anyLong()))
 				.thenReturn(Optional.of(member));
@@ -444,9 +459,11 @@ public class TicketReservationServiceTest {
 			ReflectionTestUtils.setField(concert, "startTime", LocalDateTime.now().plusDays(2)); // 충분히 미래 시간
 
 			// 리포지토리 모킹
-			when(ticketReservationRepository.findById(anyLong()))
+			when(ticketReservationRepository.findByIdWithPessimisticLock(anyLong()))
 				.thenReturn(Optional.of(ticketReservation));
-			when(concertRepository.findById(anyLong()))
+			when(concertSeatRepository.findByIdWithPessimisticLock(eq(concertSeat.getId())))
+				.thenReturn(Optional.of(concertSeat));
+			when(concertRepository.findByIdWithPessimisticLock(eq(concert.getId())))
 				.thenReturn(Optional.of(concert));
 			when(memberRepository.findById(anyLong()))
 				.thenReturn(Optional.of(member));
@@ -465,9 +482,11 @@ public class TicketReservationServiceTest {
 			ReflectionTestUtils.setField(concert, "startTime", LocalDateTime.now().plusHours(23)); // 콘서트 시작 시간이 24시간 이내
 
 			// 리포지토리 모킹
-			when(ticketReservationRepository.findById(anyLong()))
+			when(ticketReservationRepository.findByIdWithPessimisticLock(anyLong()))
 				.thenReturn(Optional.of(ticketReservation));
-			when(concertRepository.findById(anyLong()))
+			when(concertSeatRepository.findByIdWithPessimisticLock(eq(concertSeat.getId())))
+				.thenReturn(Optional.of(concertSeat));
+			when(concertRepository.findByIdWithPessimisticLock(eq(concert.getId())))
 				.thenReturn(Optional.of(concert));
 			when(memberRepository.findById(anyLong()))
 				.thenReturn(Optional.of(member));
