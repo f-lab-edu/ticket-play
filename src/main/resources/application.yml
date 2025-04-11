@@ -62,6 +62,11 @@ spring:
     username: ${SPRING_DATASOURCE_USERNAME:tiple}
     password: ${SPRING_DATASOURCE_PASSWORD:0000}
     driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 20  # 기본값 10에서 증가
+      connection-timeout: 30000  # 30초(기본값)
+      max-lifetime: 1800000  # 30분
+      idle-timeout: 600000  # 10분
   jpa:
     hibernate:
       ddl-auto: none

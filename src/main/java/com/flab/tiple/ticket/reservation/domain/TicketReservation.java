@@ -22,6 +22,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Version;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -59,6 +60,11 @@ public class TicketReservation extends BaseTime {
 	@Enumerated(EnumType.STRING)
 	@Column(name = "status", nullable = false)
 	private TicketReservationStatus status;
+
+	// 낙관적 락을 위한 버전 필드 추가
+	@Version
+	private Long version;
+
 
 	/**
 	 * 상태 전이 가능 여부를 검증

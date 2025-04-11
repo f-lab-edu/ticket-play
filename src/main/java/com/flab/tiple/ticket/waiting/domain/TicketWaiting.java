@@ -17,6 +17,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.Version;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -42,9 +43,13 @@ public class TicketWaiting extends BaseTime {
 
 	private Integer waitingNumber;
 
+	@Version
+	private Long version;
 
 	@Enumerated(EnumType.STRING)
 	private TicketWaitingStatus status;
+
+
 
 	public void checkTicketWaitingAuth() {
 		if (status == TicketWaitingStatus.CANCELED) throw new TicketWaitingStatusInvalidException(ErrorCode.TICKET_WAITING_INVALID_WAITING_STATUS, ErrorCode.TICKET_WAITING_INVALID_WAITING_STATUS.getDescription());
