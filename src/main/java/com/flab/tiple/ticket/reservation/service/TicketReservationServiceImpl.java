@@ -3,6 +3,8 @@ package com.flab.tiple.ticket.reservation.service;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.flab.tiple.concert.domain.Concert;
@@ -27,6 +29,7 @@ import com.flab.tiple.ticket.reservation.dto.response.TicketReservationResponseD
 import com.flab.tiple.ticket.reservation.dto.response.TicketReservationServiceFindInfo;
 import com.flab.tiple.ticket.reservation.enums.TicketProcessStatus;
 import com.flab.tiple.ticket.reservation.enums.TicketReservationStatus;
+import com.flab.tiple.ticket.reservation.exception.TicketReservationException;
 import com.flab.tiple.ticket.reservation.exception.TicketReservationNotFoundException;
 import com.flab.tiple.ticket.reservation.repository.TicketReservationRepository;
 import com.flab.tiple.ticket.waiting.domain.TicketWaiting;
@@ -58,26 +61,25 @@ public class TicketReservationServiceImpl implements TicketReservationService {
 	/**
 	 * 티켓 예약 요청 처리
 	 */
-	@Transactional
+	@Transactional(isolation = Isolation.SERIALIZABLE)
 	@Override
 	public TicketReservationResponseDto<?> requestReservation(
 		TicketReservationRequestDto requestDto,
 		Long memberId
 	) {
+		//이 좌석 ID를 기반으로 락 이름을 생성.
 		String seatLockName = SEAT_LOCK_PREFIX + requestDto.getSeatId();
 
 		try {
 			// MySQL Named Lock을 사용하여 좌석에 대한 배타적 접근 보장
+			//	 executeWithLock() 내부에서는 다음과 같이 동작:
+			//   SELECT GET_LOCK('seat_lock_123', 10); -- 최대 10초 대기
+			//   락을 잡은 스레드만 아래 로직을 실행할 수 있음.
+
 			return mySQLLockService.executeWithLock(seatLockName, LOCK_TIMEOUT_SECONDS, () -> {
 				try {
-					// 1. 정보 찾기 (직접 쿼리로 최신 데이터 가져오기)
-					TicketReservationServiceFindInfo info = findSeatInfo(requestDto.getSeatId(), memberId);
-
-					// 2. 정보 검증
-					validateSeatReservation(info);
-
-					// 3. 정보 수정 및 예약 처리
-					TicketReservationInfoResponseDto reservation = processSeatReservation(info);
+					// 락 획득 성공 → 좌석 예약 시도
+					TicketReservationInfoResponseDto reservation = tryReserveSeat(requestDto, memberId);
 
 					return TicketReservationResponseDto.builder()
 						.data(reservation)
@@ -93,21 +95,22 @@ public class TicketReservationServiceImpl implements TicketReservationService {
 						.build();
 				}
 			});
-		} catch (LockAcquisitionException e) {
-			// 락 획득 실패 시 대기 처리
-			TicketWaitingResponseDto waitingReservation = processWaitingRegistration(requestDto, memberId);
-			return TicketReservationResponseDto.builder()
-				.data(waitingReservation)
-				.status(TicketProcessStatus.WAITING)
-				.build();
 		} catch (Exception e) {
-			// 기타 예외 발생 시 대기 처리
-			TicketWaitingResponseDto waitingReservation = processWaitingRegistration(requestDto, memberId);
-			return TicketReservationResponseDto.builder()
-				.data(waitingReservation)
-				.status(TicketProcessStatus.WAITING)
-				.build();
+			throw new TicketReservationException(ErrorCode.TICKET_RESERVATION_ERROR, ErrorCode.TICKET_RESERVATION_ERROR.getDescription());
 		}
+	}
+
+	@Transactional(propagation = Propagation.SUPPORTS)
+	public TicketReservationInfoResponseDto tryReserveSeat(
+		TicketReservationRequestDto requestDto,
+		Long memberId
+	) {
+		// 1. 정보 찾기
+		TicketReservationServiceFindInfo info = findSeatInfo(requestDto.getSeatId(), memberId);
+		// 2. 정보 검증
+		validateSeatReservation(info);
+		// 3. 정보 수정
+		return processSeatReservation(info);
 	}
 
 	/**
@@ -164,7 +167,7 @@ public class TicketReservationServiceImpl implements TicketReservationService {
 	/**
 	 * 대기 목록 등록 처리
 	 */
-	@Transactional
+	@Transactional(propagation = Propagation.SUPPORTS)
 	public TicketWaitingResponseDto processWaitingRegistration(
 		TicketReservationRequestDto requestDto,
 		Long memberId

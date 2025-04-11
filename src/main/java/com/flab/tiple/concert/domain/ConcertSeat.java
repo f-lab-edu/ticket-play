@@ -16,7 +16,6 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Version;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -43,10 +42,6 @@ public class ConcertSeat extends BaseTime {
 	@Enumerated(EnumType.STRING)
 	@Column(name = "status", nullable = false)
 	private SeatStatus status;
-
-	// 낙관적 락을 위한 버전 필드 추가
-	@Version
-	private Long version;
 
 
 	// 좌석 예약 가능 여부 검증 메서드
