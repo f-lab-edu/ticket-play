@@ -5,7 +5,8 @@ spring:
   jpa:
     properties:
       hibernate:
-        format_sql: true # Hibernate가 생성하는 SQL 쿼리를 사람이 읽기 쉬운 형태로 포맷팅
+        format_sql: false # Hibernate가 생성하는 SQL 쿼리를 사람이 읽기 쉬운 형태로 포맷팅
+        show_sql: false
 management:
   endpoints:
     web:
@@ -25,8 +26,9 @@ server:
     uri-encoding: UTF-8
 
 logging.level:
-  org.hibernate.SQL: debug
-  org.hibernate.type: trace
+  org.hibernate.SQL: off
+  org.hibernate.type: off
+  root: info
 
 jwt:
   secret: ${JWT_SECRET:default_dev_secret_key}
