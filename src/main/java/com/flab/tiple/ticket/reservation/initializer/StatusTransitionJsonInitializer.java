@@ -49,15 +49,27 @@ public class StatusTransitionJsonInitializer {
 		}
 	}
 
-	private Map<TicketReservationStatus, Set<TicketReservationStatus>> loadTransitionsFromJson() throws
-		IOException {
-		// 클래스패스에서 JSON 파일 로드
+	private Map<TicketReservationStatus, Set<TicketReservationStatus>> loadTransitionsFromJson() throws IOException {
+		InputStream inputStream = loadJsonFileFromClasspath();
+		JsonNode transitionsNode = readTransitionsFromJson(inputStream);
+		return convertJsonToTransitionMap(transitionsNode);
+	}
+
+	/**
+	 * 1. 클래스패스에서 JSON 파일 로드
+	 */
+	private InputStream loadJsonFileFromClasspath() throws FileNotFoundException {
 		InputStream inputStream = getClass().getClassLoader().getResourceAsStream(JSON_FILE_PATH);
 		if (inputStream == null) {
 			throw new FileNotFoundException("Cannot find " + JSON_FILE_PATH + " in classpath");
 		}
+		return inputStream;
+	}
 
-		// JSON 파일 읽기
+	/**
+	 * 2. JSON 파일 읽기
+	 */
+	private JsonNode readTransitionsFromJson(InputStream inputStream) throws IOException {
 		JsonNode rootNode = objectMapper.readTree(inputStream);
 		JsonNode transitionsNode = rootNode.get("statusTransitions");
 
@@ -65,7 +77,13 @@ public class StatusTransitionJsonInitializer {
 			throw new IllegalStateException("Invalid JSON format: missing or invalid 'statusTransitions' object");
 		}
 
-		// JSON 데이터를 Map으로 변환
+		return transitionsNode;
+	}
+
+	/**
+	 * 3. JSON 데이터를 Map으로 변환
+	 */
+	private Map<TicketReservationStatus, Set<TicketReservationStatus>> convertJsonToTransitionMap(JsonNode transitionsNode) {
 		Map<TicketReservationStatus, Set<TicketReservationStatus>> result = new HashMap<>();
 
 		Iterator<Map.Entry<String, JsonNode>> fields = transitionsNode.fields();

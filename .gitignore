@@ -5,6 +5,9 @@ build/
 !**/src/main/**/build/
 !**/src/test/**/build/
 
+grafana-data/
+prometheus-data/
+
 # QueryDSL
 /src/main/generated/
 **/generated/
