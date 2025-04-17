@@ -52,7 +52,7 @@ public class TicketReservationServiceImpl implements TicketReservationService {
 	private final TicketWaitingRepository ticketWaitingRepository;
 	private final MySQLLockService mySQLLockService;
 
-	private static final int LOCK_TIMEOUT_SECONDS = 10;
+	private static final int LOCK_TIMEOUT_SECONDS = 1;
 	private static final String SEAT_LOCK_PREFIX = "seat_lock_";
 	private static final String RESERVATION_LOCK_PREFIX = "reservation_lock_";
 	private static final String CONCERT_LOCK_PREFIX = "concert_lock_";
@@ -61,7 +61,7 @@ public class TicketReservationServiceImpl implements TicketReservationService {
 	/**
 	 * 티켓 예약 요청 처리
 	 */
-	@Transactional(isolation = Isolation.SERIALIZABLE)
+	@Transactional
 	@Override
 	public TicketReservationResponseDto<?> requestReservation(
 		TicketReservationRequestDto requestDto,
