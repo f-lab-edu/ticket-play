@@ -45,6 +45,13 @@ spring:
     username: sa
     password:
     driver-class-name: org.h2.Driver
+    datasource:
+      hikari:
+        maximum-pool-size: 20         # 기본값보다 증가
+        minimum-idle: 5               # 유지할 최소 연결 수
+        connection-timeout: 30000     # 연결 타임아웃(ms)
+        idle-timeout: 600000          # 유휴 연결 타임아웃(ms)
+        max-lifetime: 1800000         # 연결 최대 수명(ms)
   jpa:
     hibernate:
       ddl-auto: none  # JPA에 의한 테이블 자동 생성 비활성화

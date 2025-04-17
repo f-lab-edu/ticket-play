@@ -49,7 +49,7 @@ public class TicketReservationServiceImpl implements TicketReservationService {
 	private final TicketWaitingRepository ticketWaitingRepository;
 
 	// 티켓 예약 요청
-	@Transactional(isolation = Isolation.SERIALIZABLE)
+	@Transactional
 	@Override
 	public TicketReservationResponseDto<?> requestReservation(
 		TicketReservationRequestDto requestDto,
