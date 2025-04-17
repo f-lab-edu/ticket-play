@@ -1,3 +1,5 @@
+
+
 version: '3.8'
 
 services:
@@ -19,6 +21,48 @@ services:
     ports:
       - "8080:8080"
     # mysql이 제대로 실행되면 실행
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - app-network
+  server2:
+    container_name: spring-server2
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - SPRING_PROFILES_ACTIVE=local-docker
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/tiple?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=UTF-8
+      - SPRING_DATASOURCE_USERNAME=tiple
+      - SPRING_DATASOURCE_PASSWORD=0000
+      - LANG=C.UTF-8
+      - LC_ALL=C.UTF-8
+      - JAVA_OPTS=-Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8
+      - SERVER_PORT=8081
+    ports:
+      - "8081:8081"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - app-network
+  server3:
+    container_name: spring-server3
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - SPRING_PROFILES_ACTIVE=local-docker
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/tiple?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=UTF-8
+      - SPRING_DATASOURCE_USERNAME=tiple
+      - SPRING_DATASOURCE_PASSWORD=0000
+      - LANG=C.UTF-8
+      - LC_ALL=C.UTF-8
+      - JAVA_OPTS=-Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8
+      - SERVER_PORT=8083
+    ports:
+      - "8083:8083"
     depends_on:
       mysql:
         condition: service_healthy
