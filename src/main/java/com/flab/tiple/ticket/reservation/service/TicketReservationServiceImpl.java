@@ -1,8 +1,13 @@
+
+
 package com.flab.tiple.ticket.reservation.service;
 
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.flab.tiple.concert.domain.Concert;
@@ -15,6 +20,7 @@ import com.flab.tiple.concert.exception.ConcertSeatReservationException;
 import com.flab.tiple.concert.repository.concert.ConcertRepository;
 import com.flab.tiple.concert.repository.concertSeat.ConcertSeatRepository;
 import com.flab.tiple.global.exception.ErrorCode;
+import com.flab.tiple.global.util.RedissonLock;
 import com.flab.tiple.member.domain.Member;
 import com.flab.tiple.member.dto.response.MemberInfoDto;
 import com.flab.tiple.member.exception.MemberNotFoundException;
@@ -35,32 +41,41 @@ import com.flab.tiple.ticket.waiting.exception.TicketWaitingRegisterException;
 import com.flab.tiple.ticket.waiting.repository.TicketWaitingRepository;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
+@Slf4j
 public class TicketReservationServiceImpl implements TicketReservationService {
 	private final TicketReservationRepository ticketReservationRepository;
 	private final ConcertSeatRepository concertSeatRepository;
 	private final MemberRepository memberRepository;
 	private final ConcertRepository concertRepository;
 	private final TicketWaitingRepository ticketWaitingRepository;
+	private final RedisTemplate redisTemplate;
+	private final String SEAT_STATUS_KEY = "seatStatus:";
+	private final int REDIS_KEY_TTL = 30;
 
 	// 티켓 예약 요청
+	@RedissonLock(value = "#requestDto.seatId", waitTime = 5000, leaseTime = 10000)
 	@Transactional
 	@Override
 	public TicketReservationResponseDto<?> requestReservation(
 		TicketReservationRequestDto requestDto,
 		Long memberId
 	) {
+		log.info("좌석 예약 요청 - 좌석 ID: {}, 회원 ID: {}", requestDto.getSeatId(), memberId);
+		String seatStatusKey = SEAT_STATUS_KEY + requestDto.getSeatId();
 		try {
 			// 일반 예약 시도
-			TicketReservationInfoResponseDto reservation = tryReserveSeat(requestDto, memberId);
+			TicketReservationInfoResponseDto reservation = tryReserveSeat(requestDto, memberId,seatStatusKey);
 			return TicketReservationResponseDto.builder()
 				.data(reservation)
 				.status(TicketProcessStatus.SUCCESS)
 				.build();
 		} catch (ConcertSeatReservationException e) {
+			redisTemplate.delete(seatStatusKey);
 			// 좌석이 사용 불가능한 경우, 웨이팅 처리 로직으로 진행
 			TicketWaitingResponseDto waitingReservation = processWaitingRegistration(requestDto, memberId);
 			return TicketReservationResponseDto.builder()
@@ -71,17 +86,32 @@ public class TicketReservationServiceImpl implements TicketReservationService {
 	}
 
 
-	@Transactional
+	@Transactional(propagation = Propagation.SUPPORTS)
 	public TicketReservationInfoResponseDto tryReserveSeat(
 		TicketReservationRequestDto requestDto,
-		Long memberId
+		Long memberId,
+		String seatStatusKey
 	) {
 		// 1. 정보 찾기
 		TicketReservationServiceFindInfo info = findSeatInfo(requestDto.getSeatId(), memberId);
 		// 2. 정보 검증
 		validateSeatReservation(info);
-		// 3. 정보 수정
-		return processSeatReservation(info);
+
+		writeRedisSeatStatus(seatStatusKey);
+		// DB에 예약 처리
+		return processSeatReservation(seatStatusKey,info);
+
+	}
+
+	private void writeRedisSeatStatus(String seatStatusKey){
+		String seatStatusKeyStatus = (String)redisTemplate.opsForValue().get(seatStatusKey);
+		if (seatStatusKeyStatus!=null && seatStatusKeyStatus.equals("RESERVED")) throw new TicketWaitingRegisterException(
+			ErrorCode.CONCERT_SEAT_RESERVATION_NOT_POSSIBLE,
+			"RESERVED상태입니다."
+		);
+
+		// Redis에 좌석 상태 기록 (임시 예약)
+		redisTemplate.opsForValue().set(seatStatusKey, "PENDING", REDIS_KEY_TTL, TimeUnit.SECONDS);
 	}
 
 
@@ -203,7 +233,7 @@ public class TicketReservationServiceImpl implements TicketReservationService {
 			.orElseThrow(() -> new ConcertSeatNotFoundException(ErrorCode.CONCERT_SEAT_NOT_FOUND,
 				ErrorCode.CONCERT_SEAT_NOT_FOUND.getDescription()));
 
-		Concert concert = concertRepository.findById(seat.getConcert().getId())
+		Concert concert = concertRepository.findByIdForUpdate(seat.getConcert().getId())
 			.orElseThrow(() -> new ConcertNotFoundException(ErrorCode.CONCERT_NOT_FOUND,
 				ErrorCode.CONCERT_NOT_FOUND.getDescription()));
 
@@ -271,7 +301,7 @@ public class TicketReservationServiceImpl implements TicketReservationService {
 	}
 
 	// 좌석 예약 처리
-	private TicketReservationInfoResponseDto processSeatReservation(TicketReservationServiceFindInfo info) {
+	private TicketReservationInfoResponseDto processSeatReservation(String seatStatusKey,TicketReservationServiceFindInfo info) {
 		info.getConcertSeat().pending();
 		info.getConcert().reserveSeat();
 
@@ -284,6 +314,9 @@ public class TicketReservationServiceImpl implements TicketReservationService {
 		TicketReservation savedReservation = ticketReservationRepository.save(reservation);
 		concertSeatRepository.save(info.getConcertSeat());
 		concertRepository.save(info.getConcert());
+		// 성공 시 Redis에 최종 상태 업데이트
+		redisTemplate.opsForValue().set(seatStatusKey, "RESERVED", REDIS_KEY_TTL, TimeUnit.SECONDS);
+
 		return TicketReservationToDto(savedReservation);
 	}
 
