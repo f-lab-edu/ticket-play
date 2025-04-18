@@ -17,7 +17,6 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
-import jakarta.persistence.Version;
 import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
@@ -42,9 +41,6 @@ public class TicketWaiting extends BaseTime {
 	private Member member;
 
 	private Integer waitingNumber;
-
-	@Version
-	private Long version;
 
 	@Enumerated(EnumType.STRING)
 	private TicketWaitingStatus status;

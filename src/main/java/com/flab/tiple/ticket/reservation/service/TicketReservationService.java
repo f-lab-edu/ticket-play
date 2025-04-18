@@ -11,6 +11,7 @@ public interface TicketReservationService {
 		TicketReservationRequestDto requestDto,
 		Long memberId
 	);
+
 	TicketReservationInfoResponseDto approveReservation(Long reservationId, Long memberId);
 	TicketReservationInfoResponseDto cancelReservation(
 		Long reservationId,

@@ -16,6 +16,7 @@ import com.flab.tiple.global.response.ApiResponse;
 import com.flab.tiple.ticket.reservation.dto.request.TicketReservationRequestDto;
 import com.flab.tiple.ticket.reservation.dto.response.TicketReservationInfoResponseDto;
 import com.flab.tiple.ticket.reservation.dto.response.TicketReservationResponseDto;
+import com.flab.tiple.ticket.reservation.facade.TicketReservationFacade;
 import com.flab.tiple.ticket.reservation.service.TicketReservationService;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -27,6 +28,7 @@ import lombok.RequiredArgsConstructor;
 @Tag(name = "ticket-reservation", description = "티켓 예약 관련 API")
 public class TicketReservationController {
 	private final TicketReservationService ticketReservationService;
+	private final TicketReservationFacade ticketReservationFacade;
 
 	// 티켓 예약 요청
 	@PostMapping("/request")
@@ -35,7 +37,7 @@ public class TicketReservationController {
 		@RequestBody TicketReservationRequestDto requestDto
 	) {
 		Long memberId = LoginCheckAspect.getCurrentMemberId();
-		TicketReservationResponseDto<?> reservation = ticketReservationService.requestReservation(requestDto, memberId);
+		TicketReservationResponseDto<?> reservation = ticketReservationFacade.requestReservationFacade(requestDto, memberId);
 		return ApiResponse.success(reservation);
 	}
 

@@ -66,7 +66,6 @@ public class Concert extends BaseTime {
 	private String concertSeatInfo;
 
 
-
 	public void reservationStatusCheck() {
 		if(this.status != ConcertStatus.OPEN) throw new ConcertClosedException(ErrorCode.CONCERT_CLOSED, ErrorCode.CONCERT_CLOSED.getDescription());
 		if(this.reservationStartTime.isAfter(LocalDateTime.now())) throw new ConcertNotStartDateException(ErrorCode.CONCERT_NOT_START_TIME_RESERVATION, ErrorCode.CONCERT_NOT_START_TIME_RESERVATION.getDescription());

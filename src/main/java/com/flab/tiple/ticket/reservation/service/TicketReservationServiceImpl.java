@@ -1,23 +1,21 @@
 package com.flab.tiple.ticket.reservation.service;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Isolation;
-import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.flab.tiple.concert.domain.Concert;
 import com.flab.tiple.concert.domain.ConcertSeat;
 import com.flab.tiple.concert.dto.response.ConcertSeatInfo;
 import com.flab.tiple.concert.exception.ConcertNotFoundException;
+import com.flab.tiple.concert.exception.ConcertRemainSeatExistException;
 import com.flab.tiple.concert.exception.ConcertSeatNotFoundException;
 import com.flab.tiple.concert.exception.ConcertSeatReservationException;
 import com.flab.tiple.concert.repository.concert.ConcertRepository;
 import com.flab.tiple.concert.repository.concertSeat.ConcertSeatRepository;
 import com.flab.tiple.global.exception.ErrorCode;
-import com.flab.tiple.global.service.MySQLLockService;
-import com.flab.tiple.global.service.MySQLLockService.LockAcquisitionException;
 import com.flab.tiple.member.domain.Member;
 import com.flab.tiple.member.dto.response.MemberInfoDto;
 import com.flab.tiple.member.exception.MemberNotFoundException;
@@ -29,78 +27,54 @@ import com.flab.tiple.ticket.reservation.dto.response.TicketReservationResponseD
 import com.flab.tiple.ticket.reservation.dto.response.TicketReservationServiceFindInfo;
 import com.flab.tiple.ticket.reservation.enums.TicketProcessStatus;
 import com.flab.tiple.ticket.reservation.enums.TicketReservationStatus;
-import com.flab.tiple.ticket.reservation.exception.TicketReservationException;
 import com.flab.tiple.ticket.reservation.exception.TicketReservationNotFoundException;
 import com.flab.tiple.ticket.reservation.repository.TicketReservationRepository;
 import com.flab.tiple.ticket.waiting.domain.TicketWaiting;
 import com.flab.tiple.ticket.waiting.dto.response.TicketWaitingResponseDto;
 import com.flab.tiple.ticket.waiting.enums.TicketWaitingStatus;
+import com.flab.tiple.ticket.waiting.exception.TicketWaitingRegisterException;
 import com.flab.tiple.ticket.waiting.repository.TicketWaitingRepository;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
-@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
+@Slf4j
 public class TicketReservationServiceImpl implements TicketReservationService {
 	private final TicketReservationRepository ticketReservationRepository;
 	private final ConcertSeatRepository concertSeatRepository;
 	private final MemberRepository memberRepository;
 	private final ConcertRepository concertRepository;
 	private final TicketWaitingRepository ticketWaitingRepository;
-	private final MySQLLockService mySQLLockService;
 
-	private static final int LOCK_TIMEOUT_SECONDS = 1;
-	private static final String SEAT_LOCK_PREFIX = "seat_lock_";
-	private static final String RESERVATION_LOCK_PREFIX = "reservation_lock_";
-	private static final String CONCERT_LOCK_PREFIX = "concert_lock_";
-	private static final String WAITING_LOCK_PREFIX = "waiting_lock_";
-
-	/**
-	 * 티켓 예약 요청 처리
-	 */
+	// 티켓 예약 요청
 	@Transactional
 	@Override
 	public TicketReservationResponseDto<?> requestReservation(
 		TicketReservationRequestDto requestDto,
 		Long memberId
 	) {
-		//이 좌석 ID를 기반으로 락 이름을 생성.
-		String seatLockName = SEAT_LOCK_PREFIX + requestDto.getSeatId();
-
 		try {
-			// MySQL Named Lock을 사용하여 좌석에 대한 배타적 접근 보장
-			//	 executeWithLock() 내부에서는 다음과 같이 동작:
-			//   SELECT GET_LOCK('seat_lock_123', 10); -- 최대 10초 대기
-			//   락을 잡은 스레드만 아래 로직을 실행할 수 있음.
-
-			return mySQLLockService.executeWithLock(seatLockName, LOCK_TIMEOUT_SECONDS, () -> {
-				try {
-					// 락 획득 성공 → 좌석 예약 시도
-					TicketReservationInfoResponseDto reservation = tryReserveSeat(requestDto, memberId);
-
-					return TicketReservationResponseDto.builder()
-						.data(reservation)
-						.status(TicketProcessStatus.SUCCESS)
-						.build();
-
-				} catch (ConcertSeatReservationException e) {
-					// 좌석 예약 실패 시 대기 처리
-					TicketWaitingResponseDto waitingReservation = processWaitingRegistration(requestDto, memberId);
-					return TicketReservationResponseDto.builder()
-						.data(waitingReservation)
-						.status(TicketProcessStatus.WAITING)
-						.build();
-				}
-			});
-		} catch (Exception e) {
-			throw new TicketReservationException(ErrorCode.TICKET_RESERVATION_ERROR, ErrorCode.TICKET_RESERVATION_ERROR.getDescription());
+			// 일반 예약 시도
+			TicketReservationInfoResponseDto reservation = tryReserveSeat(requestDto, memberId);
+			return TicketReservationResponseDto.builder()
+				.data(reservation)
+				.status(TicketProcessStatus.SUCCESS)
+				.build();
+		} catch (ConcertSeatReservationException e) {
+			// 좌석이 사용 불가능한 경우, 웨이팅 처리 로직으로 진행
+			TicketWaitingResponseDto waitingReservation = processWaitingRegistration(requestDto, memberId);
+			return TicketReservationResponseDto.builder()
+				.data(waitingReservation)
+				.status(TicketProcessStatus.WAITING)
+				.build();
 		}
 	}
 
-	@Transactional(propagation = Propagation.SUPPORTS)
+
+	@Transactional
 	public TicketReservationInfoResponseDto tryReserveSeat(
 		TicketReservationRequestDto requestDto,
 		Long memberId
@@ -113,101 +87,60 @@ public class TicketReservationServiceImpl implements TicketReservationService {
 		return processSeatReservation(info);
 	}
 
-	/**
-	 * 티켓 예약 승인
-	 */
+
+
+	@Transactional
+	public TicketWaitingResponseDto processWaitingRegistration(
+		TicketReservationRequestDto requestDto,
+		Long memberId
+	) {
+		try {
+			// 1. 정보 찾기
+			TicketReservationServiceFindInfo info = findSeatInfo(requestDto.getSeatId(), memberId);
+			// 2. 정보 검증
+			validateWaitingRegistration(info);
+			// 3. 정보 수정
+			return registerWaiting(info);
+		} catch (ConcertRemainSeatExistException e) {
+			throw new ConcertRemainSeatExistException(ErrorCode.CONCERT_REMAINING_SEAT_EXIST,
+				ErrorCode.CONCERT_REMAINING_SEAT_EXIST.getDescription());
+		} catch (Exception ex) {
+			log.info("waiting 등록 중 에러:{}",ex.getMessage());
+			throw new TicketWaitingRegisterException(ErrorCode.TICKET_WAITING_ERROR,
+				ErrorCode.TICKET_WAITING_ERROR.getDescription());
+		}
+	}
+	// 예약 승인
 	@Transactional
 	@Override
 	public TicketReservationInfoResponseDto approveReservation(Long reservationId, Long memberId) {
-		String lockName = RESERVATION_LOCK_PREFIX + reservationId;
-
-		return mySQLLockService.executeWithLock(lockName, LOCK_TIMEOUT_SECONDS, () -> {
-			// 1. 정보 찾기
-			TicketReservationServiceFindInfo info = findReservationInfo(reservationId, memberId);
-			// 2. 정보 검증
-			validateReservationApproval(info);
-			// 3. 정보 수정
-			TicketReservationInfoResponseDto result = processReservationApproval(info);
-			return result;
-		});
+		// 1. 정보 찾기
+		TicketReservationServiceFindInfo info = findReservationInfo(reservationId, memberId);
+		// 2. 정보 검증
+		validateReservationApproval(info);
+		// 3. 정보 수정
+		return processReservationApproval(info);
 	}
 
-	/**
-	 * 티켓 예약 취소
-	 */
+
 	@Transactional
 	@Override
 	public TicketReservationInfoResponseDto cancelReservation(
 		Long reservationId,
 		Long memberId
 	) {
-		String lockName = RESERVATION_LOCK_PREFIX + reservationId;
-
-		return mySQLLockService.executeWithLock(lockName, LOCK_TIMEOUT_SECONDS, () -> {
-			// 1. 정보 찾기
-			TicketReservationServiceFindInfo info = findReservationInfo(reservationId, memberId);
-			// 2. 정보 검증
-			validateReservationCancellation(info);
-			// 3. 정보 수정
-			TicketReservationInfoResponseDto result = processReservationCancellation(info);
-			log.info("Successfully cancelled reservation with ID: {}", reservationId);
-			return result;
-		});
+		// 1. 정보 찾기
+		TicketReservationServiceFindInfo info = findReservationInfo(reservationId, memberId);
+		// 2. 정보 검증
+		validateReservationCancellation(info);
+		// 3. 정보 수정
+		return processReservationCancellation(info);
 	}
 
-	/**
-	 * 사용자의 모든 예약 조회
-	 */
 	@Override
 	public List<TicketReservationInfoResponseDto> getMemberReservations(Long memberId) {
-		List<TicketReservation> ticketReservations = ticketReservationRepository.findByMemberId(memberId);
+		List<TicketReservation> ticketReservations =  ticketReservationRepository.findByMemberId(memberId);
 		return ticketReservations.stream().map(this::TicketReservationToDto).toList();
-	}
-
-	/**
-	 * 대기 목록 등록 처리
-	 */
-	@Transactional(propagation = Propagation.SUPPORTS)
-	public TicketWaitingResponseDto processWaitingRegistration(
-		TicketReservationRequestDto requestDto,
-		Long memberId
-	) {
-		// 대기 목록 등록 시 콘서트 ID 락 사용
-		ConcertSeat seat = concertSeatRepository.findById(requestDto.getSeatId())
-			.orElseThrow(() -> new ConcertSeatNotFoundException(ErrorCode.CONCERT_SEAT_NOT_FOUND,
-				ErrorCode.CONCERT_SEAT_NOT_FOUND.getDescription()));
-		Long concertId = seat.getConcert().getId();
-
-		String lockName = WAITING_LOCK_PREFIX + concertId;
-
-		return mySQLLockService.executeWithLock(lockName, LOCK_TIMEOUT_SECONDS, () -> {
-			// 1. 정보 찾기
-			TicketReservationServiceFindInfo info = findSeatInfo(requestDto.getSeatId(), memberId);
-			// 2. 정보 검증
-			validateWaitingRegistration(info);
-			// 3. 정보 수정
-			TicketWaitingResponseDto result = registerWaiting(info);
-			return result;
-		});
-	}
-
-	// 대기 목록 등록
-	@Transactional
-	public TicketWaitingResponseDto registerWaiting(TicketReservationServiceFindInfo info) {
-		// 대기 번호 조회 및 할당
-		Integer maxWaitingNumber = ticketWaitingRepository.findMaxWaitingNumberByConcertId(info.getConcert().getId())
-			.orElse(0);
-		Integer waitingNumber = maxWaitingNumber + 1;
-
-		TicketWaiting waiting = TicketWaiting.builder()
-			.concert(info.getConcert())
-			.member(info.getMember())
-			.waitingNumber(waitingNumber)
-			.status(TicketWaitingStatus.WAITING)
-			.build();
-
-		TicketWaiting savedWaiting = ticketWaitingRepository.save(waiting);
-		return TicketWaitingResponseToDto(savedWaiting, waitingNumber);
 	}
 
 	private TicketWaitingResponseDto TicketWaitingResponseToDto(TicketWaiting ticketWaiting, Integer waitingNumber) {
@@ -241,6 +174,8 @@ public class TicketReservationServiceImpl implements TicketReservationService {
 			.build();
 	}
 
+
+
 	// 예약 ID로 정보 조회
 	private TicketReservationServiceFindInfo findReservationInfo(Long reservationId, Long memberId) {
 		TicketReservation reservation = ticketReservationRepository.findById(reservationId)
@@ -249,7 +184,7 @@ public class TicketReservationServiceImpl implements TicketReservationService {
 
 		ConcertSeat concertSeat = reservation.getSeat();
 
-		Concert concert = concertRepository.findById(concertSeat.getConcert().getId())
+		Concert concert = concertRepository.findByIdForUpdate(concertSeat.getConcert().getId())
 			.orElseThrow(() -> new ConcertNotFoundException(ErrorCode.CONCERT_NOT_FOUND,
 				ErrorCode.CONCERT_NOT_FOUND.getDescription()));
 
@@ -265,14 +200,12 @@ public class TicketReservationServiceImpl implements TicketReservationService {
 			.build();
 	}
 
-	// 좌석 ID로 정보 조회 - FOR UPDATE 쿼리 사용하여 비관적 락 적용
+	// 좌석 ID로 정보 조회
 	private TicketReservationServiceFindInfo findSeatInfo(Long seatId, Long memberId) {
-		// 최신 상태의 좌석 정보 조회
-		ConcertSeat seat = concertSeatRepository.findByIdForUpdate(seatId)
+		ConcertSeat seat = concertSeatRepository.findById(seatId)
 			.orElseThrow(() -> new ConcertSeatNotFoundException(ErrorCode.CONCERT_SEAT_NOT_FOUND,
 				ErrorCode.CONCERT_SEAT_NOT_FOUND.getDescription()));
 
-		// 최신 상태의 콘서트 정보 조회
 		Concert concert = concertRepository.findByIdForUpdate(seat.getConcert().getId())
 			.orElseThrow(() -> new ConcertNotFoundException(ErrorCode.CONCERT_NOT_FOUND,
 				ErrorCode.CONCERT_NOT_FOUND.getDescription()));
@@ -356,4 +289,26 @@ public class TicketReservationServiceImpl implements TicketReservationService {
 		concertRepository.save(info.getConcert());
 		return TicketReservationToDto(savedReservation);
 	}
+
+	// 웨이팅 등록 처리
+	public TicketWaitingResponseDto registerWaiting(TicketReservationServiceFindInfo info) {
+		// 현재 최대 대기 번호 조회 (동시성 문제 없음 - Facade에서 락 보유 중)
+		Integer maxWaitingNumber = ticketWaitingRepository.findMaxWaitingNumberByConcertId(info.getConcert().getId())
+			.orElse(0);
+		Integer waitingNumber = maxWaitingNumber + 1;
+
+		// 대기 정보 생성
+		TicketWaiting waiting = TicketWaiting.builder()
+			.concert(info.getConcert())
+			.member(info.getMember())
+			.waitingNumber(waitingNumber)
+			.status(TicketWaitingStatus.WAITING)
+			.build();
+
+		// 저장 및 반환
+		TicketWaiting savedWaiting = ticketWaitingRepository.save(waiting);
+		return TicketWaitingResponseToDto(savedWaiting, waitingNumber);
+	}
+
+
 }

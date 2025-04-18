@@ -11,7 +11,6 @@ CREATE TABLE IF NOT EXISTS concert  (
     concert_hall_name VARCHAR(30) NOT NULL,
     concert_hall_address VARCHAR(200) NOT NULL,
     concert_seat_info TEXT NOT NULL,
-    version BIGINT DEFAULT 0 NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT NULL,
     deleted_at TIMESTAMP NULL DEFAULT NULL
@@ -23,7 +22,6 @@ CREATE TABLE IF NOT EXISTS concert_seat (
     grade VARCHAR(20),
     seat_number TINYINT,
     status VARCHAR(20),
-    version BIGINT DEFAULT 0 NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT NULL,
     deleted_at TIMESTAMP NULL
@@ -35,7 +33,6 @@ CREATE TABLE IF NOT EXISTS member (
     password VARCHAR(255) NOT NULL,
     name VARCHAR(100) NOT NULL,
     role VARCHAR(20) NOT NULL,
-    version BIGINT DEFAULT 0 NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT NULL,
     deleted_at TIMESTAMP DEFAULT NULL
@@ -46,7 +43,6 @@ CREATE TABLE IF NOT EXISTS ticket_reservation (
     member_id BIGINT NOT NULL,
     seat_id BIGINT NOT NULL,
     status VARCHAR(20) NOT NULL,
-    version BIGINT DEFAULT 0 NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT NULL,
     deleted_at TIMESTAMP NULL DEFAULT NULL
