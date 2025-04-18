@@ -9,6 +9,7 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor(access = AccessLevel.PRIVATE)
 public class TicketReservationRequestDto {
 	private Long seatId;
+	private Long concertId;
 
 	@Builder
 	public TicketReservationRequestDto(Long seatId) {

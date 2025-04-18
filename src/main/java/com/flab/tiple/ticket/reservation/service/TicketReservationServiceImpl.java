@@ -20,7 +20,6 @@ import com.flab.tiple.concert.exception.ConcertSeatReservationException;
 import com.flab.tiple.concert.repository.concert.ConcertRepository;
 import com.flab.tiple.concert.repository.concertSeat.ConcertSeatRepository;
 import com.flab.tiple.global.exception.ErrorCode;
-import com.flab.tiple.global.util.RedissonLock;
 import com.flab.tiple.member.domain.Member;
 import com.flab.tiple.member.dto.response.MemberInfoDto;
 import com.flab.tiple.member.exception.MemberNotFoundException;
@@ -58,7 +57,6 @@ public class TicketReservationServiceImpl implements TicketReservationService {
 	private final int REDIS_KEY_TTL = 30;
 
 	// 티켓 예약 요청
-	@RedissonLock(value = "#requestDto.seatId", waitTime = 5000, leaseTime = 10000)
 	@Transactional
 	@Override
 	public TicketReservationResponseDto<?> requestReservation(
@@ -67,15 +65,15 @@ public class TicketReservationServiceImpl implements TicketReservationService {
 	) {
 		log.info("좌석 예약 요청 - 좌석 ID: {}, 회원 ID: {}", requestDto.getSeatId(), memberId);
 		String seatStatusKey = SEAT_STATUS_KEY + requestDto.getSeatId();
+
 		try {
 			// 일반 예약 시도
-			TicketReservationInfoResponseDto reservation = tryReserveSeat(requestDto, memberId,seatStatusKey);
+			TicketReservationInfoResponseDto reservation = tryReserveSeat(requestDto, memberId);
 			return TicketReservationResponseDto.builder()
 				.data(reservation)
 				.status(TicketProcessStatus.SUCCESS)
 				.build();
 		} catch (ConcertSeatReservationException e) {
-			redisTemplate.delete(seatStatusKey);
 			// 좌석이 사용 불가능한 경우, 웨이팅 처리 로직으로 진행
 			TicketWaitingResponseDto waitingReservation = processWaitingRegistration(requestDto, memberId);
 			return TicketReservationResponseDto.builder()
@@ -89,17 +87,14 @@ public class TicketReservationServiceImpl implements TicketReservationService {
 	@Transactional(propagation = Propagation.SUPPORTS)
 	public TicketReservationInfoResponseDto tryReserveSeat(
 		TicketReservationRequestDto requestDto,
-		Long memberId,
-		String seatStatusKey
+		Long memberId
 	) {
 		// 1. 정보 찾기
 		TicketReservationServiceFindInfo info = findSeatInfo(requestDto.getSeatId(), memberId);
 		// 2. 정보 검증
 		validateSeatReservation(info);
-
-		writeRedisSeatStatus(seatStatusKey);
 		// DB에 예약 처리
-		return processSeatReservation(seatStatusKey,info);
+		return processSeatReservation(info);
 
 	}
 
@@ -126,15 +121,21 @@ public class TicketReservationServiceImpl implements TicketReservationService {
 			TicketReservationServiceFindInfo info = findSeatInfo(requestDto.getSeatId(), memberId);
 			// 2. 정보 검증
 			validateWaitingRegistration(info);
-			// 3. 정보 수정
+
+			// 3. 동기화된 방식으로 대기 등록 처리
 			return registerWaiting(info);
+
 		} catch (ConcertRemainSeatExistException e) {
-			throw new ConcertRemainSeatExistException(ErrorCode.CONCERT_REMAINING_SEAT_EXIST,
-				ErrorCode.CONCERT_REMAINING_SEAT_EXIST.getDescription());
+			throw new ConcertRemainSeatExistException(
+				ErrorCode.CONCERT_REMAINING_SEAT_EXIST,
+				ErrorCode.CONCERT_REMAINING_SEAT_EXIST.getDescription()
+			);
 		} catch (Exception ex) {
-			System.out.println("error:" + ex.getMessage());
-			throw new TicketWaitingRegisterException(ErrorCode.TICKET_WAITING_ERROR,
-				ErrorCode.TICKET_WAITING_ERROR.getDescription());
+			log.error("웨이팅 등록 오류: {}", ex.getMessage(), ex);
+			throw new TicketWaitingRegisterException(
+				ErrorCode.TICKET_WAITING_ERROR,
+				ErrorCode.TICKET_WAITING_ERROR.getDescription()
+			);
 		}
 	}
 	// 예약 승인
@@ -301,7 +302,7 @@ public class TicketReservationServiceImpl implements TicketReservationService {
 	}
 
 	// 좌석 예약 처리
-	private TicketReservationInfoResponseDto processSeatReservation(String seatStatusKey,TicketReservationServiceFindInfo info) {
+	private TicketReservationInfoResponseDto processSeatReservation(TicketReservationServiceFindInfo info) {
 		info.getConcertSeat().pending();
 		info.getConcert().reserveSeat();
 
@@ -314,9 +315,6 @@ public class TicketReservationServiceImpl implements TicketReservationService {
 		TicketReservation savedReservation = ticketReservationRepository.save(reservation);
 		concertSeatRepository.save(info.getConcertSeat());
 		concertRepository.save(info.getConcert());
-		// 성공 시 Redis에 최종 상태 업데이트
-		redisTemplate.opsForValue().set(seatStatusKey, "RESERVED", REDIS_KEY_TTL, TimeUnit.SECONDS);
-
 		return TicketReservationToDto(savedReservation);
 	}
 
