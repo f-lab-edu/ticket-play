@@ -9,7 +9,7 @@ import org.springframework.stereotype.Component;
 
 import com.flab.tiple.concert.exception.ConcertRemainSeatExistException;
 import com.flab.tiple.global.exception.ErrorCode;
-import com.flab.tiple.global.util.DistributeLockExecutorWithRedisson;
+import com.flab.tiple.global.util.RedissionLockExecutor;
 import com.flab.tiple.ticket.reservation.dto.request.TicketReservationRequestDto;
 import com.flab.tiple.ticket.reservation.dto.response.TicketReservationResponseDto;
 import com.flab.tiple.ticket.reservation.service.TicketReservationService;
@@ -23,7 +23,7 @@ import lombok.extern.slf4j.Slf4j;
 @Slf4j
 public class TicketReservationFacade {
 	private final TicketReservationService ticketReservationService;
-	private final DistributeLockExecutorWithRedisson distributeLockExecutor;
+	private final RedissionLockExecutor distributeLockExecutor;
 
 	public TicketReservationResponseDto<?> requestReservationFacade(
 		TicketReservationRequestDto requestDto,

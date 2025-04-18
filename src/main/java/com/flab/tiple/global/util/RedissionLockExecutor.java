@@ -12,20 +12,10 @@ import lombok.extern.slf4j.Slf4j;
 @Component
 @RequiredArgsConstructor
 @Slf4j
-public class DistributeLockExecutorWithRedisson {
+public class RedissionLockExecutor {
 
 	private final RedissonClient redissonClient;
 
-	/**
-	 * Redisson을 사용하여 분산 락을 처리하는 컴포넌트 클래스
-	 *
-	 * @param lockName            락의 이름
-	 * @param waitMilliSecond     락을 기다리는 최대 시간 (밀리초)
-	 * @param leaseMilliSecond    락의 보유 시간 (밀리초)
-	 * @param runnable            락 획득 후 실행할 작업
-	 * @throws InterruptedException 락을 기다리는 동안 인터럽트가 발생한 경우
-	 * @throws IllegalStateException 락 획득에 실패한 경우
-	 */
 	public void execute(String lockName, long waitMilliSecond, long leaseMilliSecond, Runnable runnable) {
 		RLock lock = redissonClient.getLock(lockName);
 		boolean locked = false;
