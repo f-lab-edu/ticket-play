@@ -311,7 +311,7 @@ public class TicketReservationServiceImpl implements TicketReservationService {
 
 	// 웨이팅 등록 처리
 	public TicketWaitingResponseDto registerWaiting(TicketReservationServiceFindInfo info) {
-		Integer maxWaitingNumber = ticketWaitingRepository.findMaxWaitingNumberByConcertId(info.getConcert().getId())
+		Integer maxWaitingNumber = ticketWaitingRepository.findMaxWaitingNumberByConcertIdWithLock(info.getConcert().getId())
 			.orElse(0);
 		Integer waitingNumber = maxWaitingNumber + 1;
 
