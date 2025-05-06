@@ -3,9 +3,7 @@
 package com.flab.tiple.ticket.reservation.service;
 
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -52,7 +50,6 @@ public class TicketReservationServiceImpl implements TicketReservationService {
 	private final MemberRepository memberRepository;
 	private final ConcertRepository concertRepository;
 	private final TicketWaitingRepository ticketWaitingRepository;
-	private final RedisTemplate redisTemplate;
 	private final String SEAT_STATUS_KEY = "seatStatus:";
 	private final int REDIS_KEY_TTL = 30;
 
@@ -96,17 +93,6 @@ public class TicketReservationServiceImpl implements TicketReservationService {
 		// DB에 예약 처리
 		return processSeatReservation(info);
 
-	}
-
-	private void writeRedisSeatStatus(String seatStatusKey){
-		String seatStatusKeyStatus = (String)redisTemplate.opsForValue().get(seatStatusKey);
-		if (seatStatusKeyStatus!=null && seatStatusKeyStatus.equals("RESERVED")) throw new TicketWaitingRegisterException(
-			ErrorCode.CONCERT_SEAT_RESERVATION_NOT_POSSIBLE,
-			"RESERVED상태입니다."
-		);
-
-		// Redis에 좌석 상태 기록 (임시 예약)
-		redisTemplate.opsForValue().set(seatStatusKey, "PENDING", REDIS_KEY_TTL, TimeUnit.SECONDS);
 	}
 
 

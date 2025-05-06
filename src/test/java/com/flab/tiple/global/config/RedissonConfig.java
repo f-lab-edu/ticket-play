@@ -1,11 +1,12 @@
 package com.flab.tiple.global.config;
 
-import org.mockito.Mockito;
 import org.redisson.api.RedissonClient;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.Primary;
 import org.springframework.context.annotation.Profile;
+
+import org.mockito.Mockito;
+import org.springframework.context.annotation.Primary;
 
 @Configuration
 @Profile("test") // 테스트 환경에서만 이 구성 활성화

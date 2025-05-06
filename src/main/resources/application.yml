@@ -1,3 +1,4 @@
+
 # 공통 설정
 spring:
   profiles:
@@ -6,6 +7,24 @@ spring:
     properties:
       hibernate:
         format_sql: true # Hibernate가 생성하는 SQL 쿼리를 사람이 읽기 쉬운 형태로 포맷팅
+  management:
+    endpoints:
+      web:
+        exposure:
+          include: "prometheus"
+    tracing:
+      sampling:
+        probability: 1.0
+    zipkin:
+      tracing:
+        endpoint: http://tempo:9411/api/v2/spans
+    metrics:
+      distribution:
+        percentiles-histogram:
+          http:
+            server:
+              requests: true
+
 
 server:
   port: ${PORT:8080}
@@ -20,13 +39,39 @@ server:
   tomcat:
     uri-encoding: UTF-8
 
-logging.level:
-  org.hibernate.SQL: debug
-  org.hibernate.type: trace
+logging:
+  level:
+    org.hibernate.SQL: debug
+    org.hibernate.type: trace
+    org.hibernate.resource.transaction: debug
+    org.springframework.transaction: debug
+    org.springframework.orm.jpa: debug
+    root: info
+  pattern:
+    console: " [${spring.application.name:}] | %logger{36} | %X{method} %X{path} | totalTime=%X{totalTime:-0ms} lockTime=%X{lockTime:-0ms} firstLockTime=%X{firstLockTime:-none} secondLockTime=%X{secondLockTime:-0}| %msg%n"
+    file: "[${spring.application.name:}] | %logger{36} | %X{method} %X{path} | totalTime=%X{totalTime:-0ms} lockTime=%X{lockTime:-0ms} firstLockTime=%X{firstLockTime:-none} secondLockTime=%X{secondLockTime:-0} | %msg%n"
+  file:
+    name: /logs/ticket-service.log
+
 
 jwt:
   secret: ${JWT_SECRET:default_dev_secret_key}
   expiration-ms: 86400000
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  endpoint:
+    prometheus:
+      enabled: true
+    health:
+      show-details: always
+  metrics:
+    export:
+      prometheus:
+        enabled: true
 
 ---
 # 로컬 개발 환경 (H2 데이터베이스 사용)
@@ -57,17 +102,13 @@ spring:
   config:
     activate:
       on-profile: local-docker
-  data:
-    redis:
-      host: ${SPRING_DATA_REDIS_HOST:redis}
-      port: ${SPRING_DATA_REDIS_PORT:6379}
   datasource:
     url: ${SPRING_DATASOURCE_URL:jdbc:mysql://mysql:3306/tiple?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}
     username: ${SPRING_DATASOURCE_USERNAME:tiple}
     password: ${SPRING_DATASOURCE_PASSWORD:0000}
     driver-class-name: com.mysql.cj.jdbc.Driver
     hikari:
-      maximum-pool-size: 20  # 기본값 10에서 증가
+      maximum-pool-size: 40  # 기본값 10에서 증가
       connection-timeout: 30000  # 30초(기본값)
       max-lifetime: 1800000  # 30분
       idle-timeout: 600000  # 10분
@@ -82,3 +123,7 @@ spring:
       mode: always
       schema-locations: classpath:data/schema.sql
       data-locations: classpath:data/data.sql
+  data:
+    redis:
+      host: ${SPRING_REDIS_HOST}
+      port: ${SPRING_REDIS_PORT}

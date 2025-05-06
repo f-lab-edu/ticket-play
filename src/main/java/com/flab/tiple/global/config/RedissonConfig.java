@@ -13,6 +13,7 @@ import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
+import org.springframework.data.redis.serializer.StringRedisSerializer;
 
 @Configuration
 @Profile("!test") // 테스트 프로파일이 아닐 때만 이 설정 사용
@@ -20,7 +21,7 @@ public class RedissonConfig {
 
 	private static final Logger log = LoggerFactory.getLogger(RedissonConfig.class);
 
-	@Value("${spring.data.redis.host}")
+	@Value("${spring.data.redis.host:127.0.0.1}")
 	private String redisHost;
 
 	@Value("${spring.data.redis.port:6379}")

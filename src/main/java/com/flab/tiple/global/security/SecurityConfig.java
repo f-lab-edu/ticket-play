@@ -75,7 +75,8 @@ public class SecurityConfig {
 		"/api/members/signup",
 		"/api/auth/login",
 		"/api/concerts",
-		"/api/concerts/**"
+		"/api/concerts/**",
+		"/actuator/**"
 	};
 
 	@Bean
@@ -85,7 +86,8 @@ public class SecurityConfig {
 			"/swagger-ui/**",
 			"/swagger-ui.html",
 			"/swagger-resources/**",
-			"/webjars/**"
+			"/webjars/**",
+			"/actuator/**"
 		);
 	}
 
