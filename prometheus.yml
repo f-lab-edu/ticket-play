@@ -1,9 +1,33 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+# 기존 scrape_configs 유지
 scrape_configs:
   - job_name: 'Tiple Server'
     metrics_path: '/actuator/prometheus'
     scrape_interval: 1s
     static_configs:
       - targets:
-          - 'server:8080'
-          - 'server2:8081'
-          - 'server3:8083'
+          - 'server:8083'
+          - 'server2:8084'
+          - 'server3:8085'
+
+  # Tempo 스크래핑 추가
+  - job_name: 'tempo'
+    static_configs:
+      - targets: ['tempo:3200']
+
+  # Loki 스크래핑 추가
+  - job_name: 'loki'
+    static_configs:
+      - targets: ['loki:3100']
+
+# 트레이싱 데이터를 위한 원격 쓰기 설정
+remote_write:
+  - url: "http://tempo:9411/api/prom/remote_write"
+    # 선택적: 특정 라벨 기반으로 필터링
+    write_relabel_configs:
+      - source_labels: [__name__]
+        regex: 'traces_.+'
+        action: keep

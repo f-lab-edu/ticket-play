@@ -9,7 +9,8 @@ import com.flab.tiple.ticket.reservation.dto.response.TicketReservationResponseD
 public interface TicketReservationService {
 	TicketReservationResponseDto requestReservation(
 		TicketReservationRequestDto requestDto,
-		Long memberId
+		Long memberId,
+		String traceId
 	);
 	TicketReservationInfoResponseDto approveReservation(Long reservationId, Long memberId);
 	TicketReservationInfoResponseDto cancelReservation(

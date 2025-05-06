@@ -10,6 +10,8 @@ services:
     volumes:
       - ./prometheus.yml:/etc/prometheus/prometheus.yml
       - ./prometheus-data:/prometheus
+    networks:
+      - app-network  # 이 줄 추가
 
   grafana:
     image: grafana/grafana:latest
@@ -21,8 +23,54 @@ services:
       - ./grafana-data:/var/lib/grafana
     depends_on:
       - prometheus
+      - loki
+      - tempo
+      - promtail
+    networks:
+      - app-network  # 이 줄 추가
+  tempo:
+    image: grafana/tempo:latest
+    command: ["-config.file=/etc/tempo.yaml"]
+    volumes:
+      - ./tempo.yaml:/etc/tempo.yaml
+    ports:
+      - "14250:14250"  # jaeger-grpc
+      - "14268:14268"  # jaeger-http
+      - "9411:9411"    # zipkin
+      - "3200:3200"    # tempo API
+      - "4317:4317"    # otlp-grpc
+      - "4318:4318"    # otlp-http
+      - "9095:9095"    # tempo-query
+    networks:
+      - app-network
+  loki:
+    image: grafana/loki:latest
+    command: ["-config.file=/etc/loki.yaml", "-config.expand-env=true"]
+    volumes:
+      - ./loki.yaml:/etc/loki.yaml
+      - ./loki-data:/loki
+    ports:
+      - "3100:3100"
+    networks:
+      - app-network
+
+
+  promtail:
+    image: grafana/promtail:latest
+    command: ["-config.file=/etc/promtail.yaml"]
+    volumes:
+      - ./promtail.yaml:/etc/promtail.yaml
+      - ./logs:/logs
+    ports:
+      - "9080:9080"
+    depends_on:
+      - loki
+    networks:
+      - app-network
   server:
     container_name: spring-server
+    volumes:
+      - ./logs:/logs
     # Dockerfile기반으로 build
     build:
       context: .
@@ -36,8 +84,9 @@ services:
       - LANG=C.UTF-8
       - LC_ALL=C.UTF-8
       - JAVA_OPTS=-Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8
+      - SERVER_PORT=8083
     ports:
-      - "8080:8080"
+      - "8083:8083"
     # mysql이 제대로 실행되면 실행
     depends_on:
       mysql:
@@ -46,6 +95,8 @@ services:
       - app-network
   server2:
     container_name: spring-server2
+    volumes:
+      - ./logs:/logs
     build:
       context: .
       dockerfile: Dockerfile
@@ -57,9 +108,9 @@ services:
       - LANG=C.UTF-8
       - LC_ALL=C.UTF-8
       - JAVA_OPTS=-Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8
-      - SERVER_PORT=8081
+      - SERVER_PORT=8084
     ports:
-      - "8081:8081"
+      - "8084:8084"
     depends_on:
       mysql:
         condition: service_healthy
@@ -67,6 +118,8 @@ services:
       - app-network
   server3:
     container_name: spring-server3
+    volumes:
+      - ./logs:/logs
     build:
       context: .
       dockerfile: Dockerfile
@@ -78,9 +131,9 @@ services:
       - LANG=C.UTF-8
       - LC_ALL=C.UTF-8
       - JAVA_OPTS=-Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8
-      - SERVER_PORT=8083
+      - SERVER_PORT=8085
     ports:
-      - "8083:8083"
+      - "8085:8085"
     depends_on:
       mysql:
         condition: service_healthy
@@ -139,6 +192,8 @@ networks:
   app-network:
     driver: bridge
 
+volumes:
+  grafana-storage:
 # mysql-data라는 볼륨을 생성하여 MySQL 데이터가 컨테이너가 종료되더라도 유지되도록 함.
 #volumes:
 #  mysql-data:

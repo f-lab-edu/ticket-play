@@ -2,6 +2,7 @@ package com.flab.tiple.ticket.reservation.service;
 
 import java.util.List;
 
+import org.slf4j.MDC;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Propagation;
@@ -37,9 +38,11 @@ import com.flab.tiple.ticket.waiting.exception.TicketWaitingRegisterException;
 import com.flab.tiple.ticket.waiting.repository.TicketWaitingRepository;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 @Transactional(readOnly = true)
 public class TicketReservationServiceImpl implements TicketReservationService {
 	private final TicketReservationRepository ticketReservationRepository;
@@ -53,18 +56,20 @@ public class TicketReservationServiceImpl implements TicketReservationService {
 	@Override
 	public TicketReservationResponseDto<?> requestReservation(
 		TicketReservationRequestDto requestDto,
-		Long memberId
+		Long memberId,
+		String traceId
 	) {
 		try {
 			// 일반 예약 시도
-			TicketReservationInfoResponseDto reservation = tryReserveSeat(requestDto, memberId);
+			TicketReservationInfoResponseDto reservation = tryReserveSeat(requestDto, memberId, traceId);
+
 			return TicketReservationResponseDto.builder()
 				.data(reservation)
 				.status(TicketProcessStatus.SUCCESS)
 				.build();
-		} catch (ConcertSeatReservationException e) {
-			// 좌석이 사용 불가능한 경우, 웨이팅 처리 로직으로 진행
+		}catch (ConcertSeatReservationException e) {
 			TicketWaitingResponseDto waitingReservation = processWaitingRegistration(requestDto, memberId);
+
 			return TicketReservationResponseDto.builder()
 				.data(waitingReservation)
 				.status(TicketProcessStatus.WAITING)
@@ -75,10 +80,11 @@ public class TicketReservationServiceImpl implements TicketReservationService {
 	@Transactional(propagation = Propagation.SUPPORTS)
 	public TicketReservationInfoResponseDto tryReserveSeat(
 		TicketReservationRequestDto requestDto,
-		Long memberId
+		Long memberId,
+		String traceId
 	) {
 		// 1. 정보 찾기 - Pessimistic Lock 적용
-		TicketReservationServiceFindInfo info = findSeatInfoWithLock(requestDto.getSeatId(), memberId);
+		TicketReservationServiceFindInfo info = findSeatInfoWithLock(requestDto.getSeatId(), memberId, traceId);
 		// 2. 정보 검증
 		validateSeatReservation(info);
 		// 3. 정보 수정
@@ -170,6 +176,8 @@ public class TicketReservationServiceImpl implements TicketReservationService {
 	// 예약 ID로 정보 조회 (Pessimistic Lock 적용)
 	private TicketReservationServiceFindInfo findReservationInfoWithLock(Long reservationId, Long memberId) {
 		// 수정: findById -> findByIdWithPessimisticLock
+		MDC.put("stepInfo", "finding_reservation_info_with_lock");
+		long lockStartTime = System.currentTimeMillis();
 		TicketReservation reservation = ticketReservationRepository.findByIdWithPessimisticLock(reservationId)
 			.orElseThrow(() -> new TicketReservationNotFoundException(ErrorCode.TICKET_RESERVATION_NOT_FOUND,
 				ErrorCode.TICKET_RESERVATION_NOT_FOUND.getDescription()));
@@ -181,7 +189,9 @@ public class TicketReservationServiceImpl implements TicketReservationService {
 		Concert concert = concertRepository.findByIdWithPessimisticLock(concertSeat.getConcert().getId())
 			.orElseThrow(() -> new ConcertNotFoundException(ErrorCode.CONCERT_NOT_FOUND,
 				ErrorCode.CONCERT_NOT_FOUND.getDescription()));
-
+		long lockTime = System.currentTimeMillis() - lockStartTime;
+		MDC.put("lockTime", lockTime + "ms");
+		log.info("Lock acquisition for waiting registration took {}ms", lockTime);
 		Member member = memberRepository.findById(memberId)
 			.orElseThrow(() -> new MemberNotFoundException(ErrorCode.MEMBER_NOT_FOUND,
 				ErrorCode.MEMBER_NOT_FOUND.getDescription()));
@@ -219,7 +229,8 @@ public class TicketReservationServiceImpl implements TicketReservationService {
 	}
 
 	// 좌석 ID로 정보 조회 (Pessimistic Lock 적용)
-	private TicketReservationServiceFindInfo findSeatInfoWithLock(Long seatId, Long memberId) {
+	private TicketReservationServiceFindInfo findSeatInfoWithLock(Long seatId, Long memberId, String traceId) {
+		long lockStartTime = System.currentTimeMillis();
 		ConcertSeat seat = concertSeatRepository.findByIdWithPessimisticLock(seatId)
 			.orElseThrow(() -> new ConcertSeatNotFoundException(ErrorCode.CONCERT_SEAT_NOT_FOUND,
 				ErrorCode.CONCERT_SEAT_NOT_FOUND.getDescription()));
@@ -231,7 +242,8 @@ public class TicketReservationServiceImpl implements TicketReservationService {
 		Member member = memberRepository.findById(memberId)
 			.orElseThrow(() -> new MemberNotFoundException(ErrorCode.MEMBER_NOT_FOUND,
 				ErrorCode.MEMBER_NOT_FOUND.getDescription()));
-
+		long lockTime = System.currentTimeMillis() - lockStartTime;
+		log.info("티켓 예약 lockTime:{}, traceId:{}", lockTime, traceId);
 		return TicketReservationServiceFindInfo.builder()
 			.concertSeat(seat)
 			.concert(concert)

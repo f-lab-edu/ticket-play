@@ -12,6 +12,18 @@ management:
     web:
       exposure:
         include: "prometheus"
+  tracing:
+    sampling:
+      probability: 1.0
+  zipkin:
+    tracing:
+      endpoint: http://tempo:9411/api/v2/spans
+  metrics:
+    distribution:
+      percentiles-histogram:
+        http:
+          server:
+            requests: true
 server:
   port: ${PORT:8080}
   forward-headers-strategy: native # 서버가 요청 헤더를 어떻게 처리할지 지정
@@ -25,10 +37,21 @@ server:
   tomcat:
     uri-encoding: UTF-8
 
-logging.level:
-  org.hibernate.SQL: off
-  org.hibernate.type: off
-  root: info
+logging:
+  level:
+    org.hibernate.SQL: debug
+    org.hibernate.type: trace
+    org.hibernate.resource.transaction: debug
+    org.springframework.transaction: debug
+    org.springframework.orm.jpa: debug
+    root: info
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss.SSS} | %5p | [${spring.application.name:},%X{trace_id:-},%X{span_id:-}] | %logger{36} | %X{method} %X{path} | totalTime=%X{totalTime:-0ms} lockTime=%X{lockTime:-0ms} stepInfo=%X{stepInfo:-none} retryCount=%X{retryCount:-0} errorType=%X{errorType:-none} | %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss.SSS} | %5p | [${spring.application.name:},%X{trace_id:-},%X{span_id:-}] | %logger{36} | %X{method} %X{path} | totalTime=%X{totalTime:-0ms} lockTime=%X{lockTime:-0ms} stepInfo=%X{stepInfo:-none} retryCount=%X{retryCount:-0} errorType=%X{errorType:-none} | %msg%n"
+  file:
+    name: /logs/ticket-service.log
+
+
 
 jwt:
   secret: ${JWT_SECRET:default_dev_secret_key}
