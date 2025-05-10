@@ -47,9 +47,9 @@ logging:
     org.springframework.transaction: debug
     org.springframework.orm.jpa: debug
     root: info
-  pattern:
-    console: " [${spring.application.name:}] | %logger{36} | %X{method} %X{path} | totalTime=%X{totalTime:-0ms} lockTime=%X{lockTime:-0ms} firstLockTime=%X{firstLockTime:-none} secondLockTime=%X{secondLockTime:-0}| %msg%n"
-    file: "[${spring.application.name:}] | %logger{36} | %X{method} %X{path} | totalTime=%X{totalTime:-0ms} lockTime=%X{lockTime:-0ms} firstLockTime=%X{firstLockTime:-none} secondLockTime=%X{secondLockTime:-0} | %msg%n"
+#  pattern:
+#    console: " [${spring.application.name:}] | %logger{36} | %X{method} %X{path} | totalTime=%X{totalTime:-0ms} lockTime=%X{lockTime:-0ms} firstLockTime=%X{firstLockTime:-none} secondLockTime=%X{secondLockTime:-0}| %msg%n"
+#    file: "[${spring.application.name:}] | %logger{36} | %X{method} %X{path} | totalTime=%X{totalTime:-0ms} lockTime=%X{lockTime:-0ms} firstLockTime=%X{firstLockTime:-none} secondLockTime=%X{secondLockTime:-0} | %msg%n"
   file:
     name: /logs/ticket-service.log
 

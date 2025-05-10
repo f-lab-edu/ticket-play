@@ -17,7 +17,7 @@ import com.flab.tiple.ticket.reservation.dto.request.TicketReservationRequestDto
 import com.flab.tiple.ticket.reservation.dto.response.TicketReservationInfoResponseDto;
 import com.flab.tiple.ticket.reservation.dto.response.TicketReservationResponseDto;
 import com.flab.tiple.ticket.reservation.facade.TicketReservationFacade;
-import com.flab.tiple.ticket.reservation.service.TicketReservationService;
+
 
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -27,7 +27,6 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 @Tag(name = "ticket-reservation", description = "티켓 예약 관련 API")
 public class TicketReservationController {
-	private final TicketReservationService ticketReservationService;
 	private final TicketReservationFacade ticketReservationFacade;
 
 	// 티켓 예약 요청
@@ -48,7 +47,7 @@ public class TicketReservationController {
 		@PathVariable Long reservationId
 	) {
 		Long memberId = LoginCheckAspect.getCurrentMemberId();
-		TicketReservationInfoResponseDto reservation = ticketReservationService.approveReservation(reservationId, memberId);
+		TicketReservationInfoResponseDto reservation = ticketReservationFacade.approveReservationFacade(reservationId, memberId);
 		return ApiResponse.success(reservation);
 	}
 
@@ -59,7 +58,7 @@ public class TicketReservationController {
 		@PathVariable Long reservationId
 	) {
 		Long memberId = LoginCheckAspect.getCurrentMemberId();
-		TicketReservationInfoResponseDto reservation = ticketReservationService.cancelReservation(reservationId, memberId);
+		TicketReservationInfoResponseDto reservation = ticketReservationFacade.cancelReservationFacade(reservationId, memberId);
 		return ApiResponse.success(reservation);
 	}
 
@@ -68,7 +67,7 @@ public class TicketReservationController {
 	@LoginCheck(required = true)
 	public ApiResponse<List<TicketReservationInfoResponseDto>> getMemberReservations() {
 		Long memberId = LoginCheckAspect.getCurrentMemberId();
-		List<TicketReservationInfoResponseDto> reservations = ticketReservationService.getMemberReservations(memberId);
+		List<TicketReservationInfoResponseDto> reservations = ticketReservationFacade.getMemberReservationsFacade(memberId);
 		return ApiResponse.success(reservations);
 	}
 }

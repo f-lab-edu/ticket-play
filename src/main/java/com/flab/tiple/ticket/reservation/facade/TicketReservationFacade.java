@@ -1,5 +1,6 @@
 package com.flab.tiple.ticket.reservation.facade;
 
+import java.util.List;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -10,6 +11,7 @@ import com.flab.tiple.concert.exception.ConcertRemainSeatExistException;
 import com.flab.tiple.global.exception.ErrorCode;
 import com.flab.tiple.global.util.RedissionLockExecutor;
 import com.flab.tiple.ticket.reservation.dto.request.TicketReservationRequestDto;
+import com.flab.tiple.ticket.reservation.dto.response.TicketReservationInfoResponseDto;
 import com.flab.tiple.ticket.reservation.dto.response.TicketReservationResponseDto;
 import com.flab.tiple.ticket.reservation.service.TicketReservationService;
 import com.flab.tiple.ticket.waiting.exception.TicketWaitingRegisterException;
@@ -24,7 +26,6 @@ import lombok.extern.slf4j.Slf4j;
 public class TicketReservationFacade {
 	private final TicketReservationService ticketReservationService;
 	private final RedissionLockExecutor distributeLockExecutor;
-	private final MeterRegistry meterRegistry;
 
 	public TicketReservationResponseDto<?> requestReservationFacade(
 		TicketReservationRequestDto requestDto,
@@ -38,27 +39,12 @@ public class TicketReservationFacade {
 		// 결과를 저장할 변수
 		final AtomicReference<TicketReservationResponseDto<?>> responseDto = new AtomicReference<>();
 
-		long startTime = System.currentTimeMillis();
-		AtomicLong firstLockAcquireTime = new AtomicLong();
-		AtomicLong secondLockAcquireTime = new AtomicLong();
-		long businessLogicTime = 0;
-
 		try {
-			// 첫 번째 락 획득 시작
-			long firstLockStartTime = System.currentTimeMillis();
 			distributeLockExecutor.execute(seatLockName, waitTime, leaseTime, () -> {
-				// 첫 번째 락 획득 완료
-				firstLockAcquireTime.set(System.currentTimeMillis() - firstLockStartTime);
-
 				// 대기열 번호에 대한 락
 				String concertWaitingLockKey = "lock:waiting:" + requestDto.getConcertId();
-
 				try {
-					long secondLockStartTime = System.currentTimeMillis();
 					distributeLockExecutor.execute(concertWaitingLockKey, waitTime, leaseTime, () -> {
-						// 비즈니스 로직 실행 시작
-						secondLockAcquireTime.set(System.currentTimeMillis() - secondLockStartTime);
-
 						// 실제 비즈니스 로직 실행
 						responseDto.set(ticketReservationService.requestReservation(requestDto, memberId));
 
@@ -71,23 +57,6 @@ public class TicketReservationFacade {
 					);
 				}
 			});
-
-			long totalTime = System.currentTimeMillis() - startTime;
-			long totalLockTimeValue = firstLockAcquireTime.get() + secondLockAcquireTime.get();
-
-			// CPU 사용량
-			double processCpuUsage = meterRegistry.get("process.cpu.usage").gauge().value() * 100;
-			double systemCpuUsage = meterRegistry.get("system.cpu.usage").gauge().value() * 100;
-
-			MDC.put("totalTime", String.valueOf(totalTime));
-			MDC.put("lockTime", String.valueOf(totalLockTimeValue));
-			MDC.put("firstLockTime", String.valueOf(firstLockAcquireTime));
-			MDC.put("secondLockTime", String.valueOf(secondLockAcquireTime));
-
-			log.info("티켓 예약 요청 완료 시간: {}ms, 티켓 예약 요청 락타임:{},first lock: {}ms, second lock:{}ms  " +
-					"Process CPU: {}%, System CPU: {}%",
-				totalTime, totalLockTimeValue, firstLockAcquireTime, secondLockAcquireTime, processCpuUsage, systemCpuUsage);
-
 			return responseDto.get();
 		} catch (IllegalStateException e) {
 			// 좌석 락 획득 실패 시
@@ -98,4 +67,26 @@ public class TicketReservationFacade {
 			);
 		}
 	}
+
+	// 티켓 예약 승인
+	public TicketReservationInfoResponseDto approveReservationFacade(
+		Long reservationId,
+		Long memberId
+	) {
+		return ticketReservationService.approveReservation(reservationId, memberId);
+	}
+
+	// 티켓 예약 취소
+	public TicketReservationInfoResponseDto cancelReservationFacade(
+		Long reservationId,
+		Long memberId
+	) {
+		return ticketReservationService.cancelReservation(reservationId, memberId);
+	}
+
+	// 회원의 티켓 예약 목록 조회
+	public List<TicketReservationInfoResponseDto> getMemberReservationsFacade(Long memberId) {
+		return ticketReservationService.getMemberReservations(memberId);
+	}
+
 }

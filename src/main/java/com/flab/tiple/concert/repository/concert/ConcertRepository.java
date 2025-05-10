@@ -23,9 +23,4 @@ public interface ConcertRepository extends JpaRepository<Concert, Long>, Concert
 	 * @return 해당 상태의 콘서트 목록
 	 */
 	List<Concert> findByStatus(ConcertStatus status);
-
-	@Query("SELECT c FROM Concert c WHERE c.id = :id")
-	@QueryHints({@QueryHint(name = "javax.persistence.lock.timeout", value = "5000")})
-	@Lock(LockModeType.PESSIMISTIC_WRITE)
-	Optional<Concert> findByIdForUpdate(@Param("id") Long id);
 }

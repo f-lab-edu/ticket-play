@@ -220,7 +220,7 @@ public class TicketReservationServiceImpl implements TicketReservationService {
 			.orElseThrow(() -> new ConcertSeatNotFoundException(ErrorCode.CONCERT_SEAT_NOT_FOUND,
 				ErrorCode.CONCERT_SEAT_NOT_FOUND.getDescription()));
 
-		Concert concert = concertRepository.findByIdForUpdate(seat.getConcert().getId())
+		Concert concert = concertRepository.findById(seat.getConcert().getId())
 			.orElseThrow(() -> new ConcertNotFoundException(ErrorCode.CONCERT_NOT_FOUND,
 				ErrorCode.CONCERT_NOT_FOUND.getDescription()));
 

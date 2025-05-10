@@ -12,7 +12,8 @@ public class TicketReservationRequestDto {
 	private Long concertId;
 
 	@Builder
-	public TicketReservationRequestDto(Long seatId) {
+	public TicketReservationRequestDto(Long seatId, Long concertId) {
 		this.seatId = seatId;
+		this.concertId = concertId;
 	}
 }
