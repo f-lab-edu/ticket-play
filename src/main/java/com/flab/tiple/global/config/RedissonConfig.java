@@ -27,6 +27,28 @@ public class RedissonConfig {
 	@Value("${spring.data.redis.port:6379}")
 	private int redisPort;
 
+	@Value("${spring.data.redis.redisson.config.single-server-config.connection-minimum-idle-size:8}")
+	private int redisMinimumIdleSize;
+
+	@Value("${spring.data.redis.redisson.config.single-server-config.connection-pool-size:24}")
+	private int redisConnectionPoolSize;
+
+	@Value("${spring.data.redis.redisson.config.single-server-config.retry-attempts:3}")
+	private int redisRetryAttempts;
+
+	@Value("${spring.data.redis.redisson.config.single-server-config.retry-interval:1500}")
+	private int redisRetryInterval;
+
+	@Value("${spring.data.redis.redisson.config.single-server-config.subscriptions-per-connection:5}")
+	private int redisSubscriptionsPerConnection;
+
+	@Value("${spring.data.redis.redisson.config.single-server-config.subscription-connection-pool-size:50}")
+	private int redisSubscriptionConnectionPoolSize;
+
+	@Value("${spring.data.redis.redisson.config.single-server-config.timeout:3000}")
+	private int redisTimeout;
+
+
 	@Bean
 	public RedissonClient redissonClient() {
 		Config config = new Config();
@@ -35,13 +57,13 @@ public class RedissonConfig {
 
 		config.useSingleServer()
 			.setAddress(redisAddress)
-			.setConnectionMinimumIdleSize(20)    // 유휴 연결 수 증가
-			.setConnectionPoolSize(64)          // 연결 풀 크기 증가
-			.setRetryAttempts(5)                // 재시도 횟수 증가
-			.setRetryInterval(500)              // 재시도 간격 감소
-			.setSubscriptionsPerConnection(10)  // 연결당 구독 수
-			.setSubscriptionConnectionPoolSize(50)  // 구독 연결 풀 크기
-			.setTimeout(3000);                  // 타임아웃 설정
+			.setConnectionMinimumIdleSize(redisMinimumIdleSize)    // 유휴 연결 수 증가
+			.setConnectionPoolSize(redisConnectionPoolSize)          // 연결 풀 크기 증가
+			.setRetryAttempts(redisRetryAttempts)                // 재시도 횟수 증가
+			.setRetryInterval(redisRetryInterval)              // 재시도 간격 감소
+			.setSubscriptionsPerConnection(redisSubscriptionsPerConnection)  // 연결당 구독 수
+			.setSubscriptionConnectionPoolSize(redisSubscriptionConnectionPoolSize)  // 구독 연결 풀 크기
+			.setTimeout(redisTimeout);                  // 타임아웃 설정
 
 		return Redisson.create(config);
 	}

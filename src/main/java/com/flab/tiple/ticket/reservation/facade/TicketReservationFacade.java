@@ -1,10 +1,8 @@
 package com.flab.tiple.ticket.reservation.facade;
 
 import java.util.List;
-import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 
-import org.slf4j.MDC;
 import org.springframework.stereotype.Component;
 
 import com.flab.tiple.concert.exception.ConcertRemainSeatExistException;
@@ -16,7 +14,6 @@ import com.flab.tiple.ticket.reservation.dto.response.TicketReservationResponseD
 import com.flab.tiple.ticket.reservation.service.TicketReservationService;
 import com.flab.tiple.ticket.waiting.exception.TicketWaitingRegisterException;
 
-import io.micrometer.core.instrument.MeterRegistry;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -27,24 +24,28 @@ public class TicketReservationFacade {
 	private final TicketReservationService ticketReservationService;
 	private final RedissionLockExecutor distributeLockExecutor;
 
+	// 클래스 레벨 상수로 정의
+	private final long LOCK_WAIT_TIME_MS = 10000; // 10초
+	private final long LOCK_LEASE_TIME_MS = 30000; // 30초
+	private final String SEAT_LOCK_PREFIX = "lockTicketReservation:";
+	private final String WAITING_LOCK_PREFIX = "lock:waiting:";
+
 	public TicketReservationResponseDto<?> requestReservationFacade(
 		TicketReservationRequestDto requestDto,
 		Long memberId
 	) {
 		// 좌석에 대한 락
-		String seatLockName = "lockTicketReservation:" + requestDto.getSeatId();
-		final long waitTime = 10000; // 10초
-		final long leaseTime = 30000; // 30초
+		String seatLockName = SEAT_LOCK_PREFIX + requestDto.getSeatId();
 
 		// 결과를 저장할 변수
 		final AtomicReference<TicketReservationResponseDto<?>> responseDto = new AtomicReference<>();
 
 		try {
-			distributeLockExecutor.execute(seatLockName, waitTime, leaseTime, () -> {
+			distributeLockExecutor.execute(seatLockName, LOCK_WAIT_TIME_MS, LOCK_LEASE_TIME_MS, () -> {
 				// 대기열 번호에 대한 락
-				String concertWaitingLockKey = "lock:waiting:" + requestDto.getConcertId();
+				String concertWaitingLockKey = WAITING_LOCK_PREFIX + requestDto.getConcertId();
 				try {
-					distributeLockExecutor.execute(concertWaitingLockKey, waitTime, leaseTime, () -> {
+					distributeLockExecutor.execute(concertWaitingLockKey, LOCK_WAIT_TIME_MS, LOCK_LEASE_TIME_MS, () -> {
 						// 실제 비즈니스 로직 실행
 						responseDto.set(ticketReservationService.requestReservation(requestDto, memberId));
 

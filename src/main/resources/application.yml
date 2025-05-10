@@ -68,9 +68,9 @@ management:
       enabled: true
     health:
       show-details: always
-  metrics:
-    export:
-      prometheus:
+  prometheus:
+    metrics:
+      export:
         enabled: true
 
 ---
@@ -127,3 +127,20 @@ spring:
     redis:
       host: ${SPRING_REDIS_HOST}
       port: ${SPRING_REDIS_PORT}
+      # Redisson 관련 설정 추가
+      redisson:
+        config:
+          # 서버 설정
+          single-server-config:
+            connection-minimum-idle-size: ${REDIS_MIN_IDLE_SIZE:8}        # 유휴 연결 수
+            connection-pool-size: ${REDIS_POOL_SIZE:24}                   # 연결 풀 크기
+            retry-attempts: ${REDIS_RETRY_ATTEMPTS:3}                     # 재시도 횟수
+            retry-interval: ${REDIS_RETRY_INTERVAL:1500}                  # 재시도 간격(ms)
+            subscriptions-per-connection: ${REDIS_SUBS_PER_CONN:5}        # 연결당 구독 수
+            subscription-connection-pool-size: ${REDIS_SUB_POOL_SIZE:50}  # 구독 연결 풀 크기
+            timeout: ${REDIS_TIMEOUT:3000}                                # 타임아웃(ms)
+      # Jedis 설정 (기존)
+      jedis:
+        pool:
+          max-active: 8
+      connect-timeout: 20
