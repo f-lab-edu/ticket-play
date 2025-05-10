@@ -5,8 +5,8 @@ import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.BDDMockito.given;
-import static org.mockito.Mockito.when;
 
+import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
@@ -56,6 +56,7 @@ import com.flab.tiple.ticket.reservation.dto.response.TicketReservationInfoRespo
 import com.flab.tiple.ticket.reservation.dto.response.TicketReservationResponseDto;
 import com.flab.tiple.ticket.reservation.enums.TicketProcessStatus;
 import com.flab.tiple.ticket.reservation.enums.TicketReservationStatus;
+import com.flab.tiple.ticket.reservation.facade.TicketReservationFacade;
 import com.flab.tiple.ticket.reservation.service.TicketReservationService;
 import com.flab.tiple.ticket.waiting.dto.response.TicketWaitingResponseDto;
 
@@ -74,8 +75,9 @@ public class TicketReservationControllerTest {
 	@Autowired
 	private ObjectMapper objectMapper;
 
+	// TicketReservationService 대신 TicketReservationFacade를 모킹
 	@MockitoBean
-	private TicketReservationService ticketReservationService;
+	private TicketReservationFacade ticketReservationFacade;
 
 	@MockitoBean
 	private JwtTokenUtil jwtTokenUtil;
@@ -85,7 +87,6 @@ public class TicketReservationControllerTest {
 
 	@Autowired
 	private LoginCheckAspect loginCheckAspect;
-
 
 	private TicketReservationRequestDto ticketReservationRequestDto;
 	private TicketReservationInfoResponseDto ticketReservationInfoResponseDto;
@@ -106,7 +107,6 @@ public class TicketReservationControllerTest {
 		SecurityContextHolder.getContext().setAuthentication(authentication);
 
 		// LoginCheckAspect에서 getCurrentMemberId() 메소드의 반환값 설정
-		// 이 부분이 중요: LoginCheckAspect의 동작을 모킹
 		try {
 			Field field = LoginCheckAspect.class.getDeclaredField("currentMemberId");
 			field.setAccessible(true);
@@ -115,7 +115,6 @@ public class TicketReservationControllerTest {
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-
 
 		ticketReservationInfoResponseDto = TicketReservationInfoResponseDto.builder()
 			.id(1L)
@@ -155,9 +154,9 @@ public class TicketReservationControllerTest {
 				.data(ticketReservationInfoResponseDto)
 				.build();
 
-		given(ticketReservationService.requestReservation(any(TicketReservationRequestDto.class), eq(1L)))
-			.willReturn(responseDto);
-
+		// Facade 메서드 모킹 (Service 대신)
+		doReturn(responseDto).when(ticketReservationFacade)
+			.requestReservationFacade(any(TicketReservationRequestDto.class), anyLong());
 
 		// When
 		ResultActions resultActions = mockMvc.perform(post("/api/ticket-reservations/request")
@@ -168,17 +167,14 @@ public class TicketReservationControllerTest {
 		MockHttpServletResponse response = resultActions.andExpect(status().isOk())
 			.andReturn().getResponse();
 
-		// 응답 내용 출력
-
 		ApiResponse<TicketReservationResponseDto<TicketReservationInfoResponseDto>> apiResponse = objectMapper.readValue(
 			response.getContentAsString(),
 			new TypeReference<ApiResponse<TicketReservationResponseDto<TicketReservationInfoResponseDto>>>() {}
 		);
 
-
 		Assertions.assertThat(apiResponse.getStatus()).isEqualTo(200);
 		Assertions.assertThat(apiResponse.getMessage()).isEqualTo("Success");
-		Assertions.assertThat(apiResponse.getData()).isNotNull(); // null 체크 추가
+		Assertions.assertThat(apiResponse.getData()).isNotNull();
 		Assertions.assertThat(apiResponse.getData())
 			.usingRecursiveComparison()
 			.ignoringFields("createdAt")
@@ -186,23 +182,21 @@ public class TicketReservationControllerTest {
 
 		Long currentMemberId = LoginCheckAspect.getCurrentMemberId();
 		assertThat(currentMemberId).isEqualTo(1L);
-
 	}
 
 	@Test
 	@DisplayName("티켓 예약 요청 - 웨이팅 등록 케이스")
 	void requestReservation_WaitingRegistration() throws Exception {
 		// Given
-
 		TicketReservationResponseDto<TicketWaitingResponseDto> responseDto =
 			TicketReservationResponseDto.<TicketWaitingResponseDto>builder()
 				.status(TicketProcessStatus.WAITING)
 				.data(ticketWaitingResponseDto)
 				.build();
 
-		// Service 모의 설정
-		when(ticketReservationService.requestReservation(any(TicketReservationRequestDto.class), eq(memberId)))
-			.thenReturn(responseDto);
+		// Facade 메서드 모킹
+		when(ticketReservationFacade.requestReservationFacade(any(), anyLong()))
+			.thenReturn(any(TicketReservationResponseDto.class));
 
 		ResultActions resultActions = mockMvc.perform(post("/api/ticket-reservations/request")
 			.contentType(MediaType.APPLICATION_JSON)
@@ -212,34 +206,29 @@ public class TicketReservationControllerTest {
 		MockHttpServletResponse response = resultActions.andExpect(status().isOk())
 			.andReturn().getResponse();
 
-		// 응답 내용 출력
-
 		ApiResponse<TicketReservationResponseDto<TicketWaitingResponseDto>> apiResponse = objectMapper.readValue(
 			response.getContentAsString(),
 			new TypeReference<ApiResponse<TicketReservationResponseDto<TicketWaitingResponseDto>>>() {}
 		);
 
-
 		Assertions.assertThat(apiResponse.getStatus()).isEqualTo(200);
 		Assertions.assertThat(apiResponse.getMessage()).isEqualTo("Success");
-		Assertions.assertThat(apiResponse.getData()).isNotNull(); // null 체크 추가
+		Assertions.assertThat(apiResponse.getData()).isNotNull();
 		Assertions.assertThat(apiResponse.getData())
 			.usingRecursiveComparison()
 			.ignoringFields("createdAt")
 			.isEqualTo(responseDto);
-
-
 	}
-
 
 	@Test
 	@DisplayName("예약 승인 성공 - /api/ticket-reservations/1/approve")
 	void approveReservationSuccess() throws Exception {
 		// Given
 		ReflectionTestUtils.setField(ticketReservationInfoResponseDto, "status", TicketReservationStatus.APPROVED);
-		when(ticketReservationService.approveReservation(anyLong(), anyLong()))
-			.thenReturn(ticketReservationInfoResponseDto);
 
+		// Facade 메서드 모킹
+		doReturn(ticketReservationInfoResponseDto).when(ticketReservationFacade)
+			.approveReservationFacade(anyLong(), anyLong());
 
 		// When
 		ResultActions resultActions = mockMvc.perform(post("/api/ticket-reservations/1/approve")
@@ -249,7 +238,6 @@ public class TicketReservationControllerTest {
 		// then
 		MockHttpServletResponse response = resultActions.andExpect(status().isOk())
 			.andReturn().getResponse();
-
 
 		ApiResponse<TicketReservationInfoResponseDto> apiResponse = objectMapper.readValue(
 			response.getContentAsString(),
@@ -262,24 +250,24 @@ public class TicketReservationControllerTest {
 			ticketReservationInfoResponseDto);
 	}
 
-
 	@Test
 	@DisplayName("예약 취소 성공 - /api/ticket-reservations/1/cancel")
 	void cancelReservationSuccess() throws Exception {
 		// Given
 		ReflectionTestUtils.setField(ticketReservationInfoResponseDto, "status", TicketReservationStatus.CANCELLED);
-		when(ticketReservationService.cancelReservation(anyLong(), anyLong()))
+
+		// Facade 메서드 모킹
+		when(ticketReservationFacade.cancelReservationFacade(anyLong(), anyLong()))
 			.thenReturn(ticketReservationInfoResponseDto);
 
 		// When
 		ResultActions resultActions = mockMvc.perform(delete("/api/ticket-reservations/1/cancel")
-				.contentType(MediaType.APPLICATION_JSON)
-				.content(objectMapper.writeValueAsString(ticketReservationRequestDto)));
+			.contentType(MediaType.APPLICATION_JSON)
+			.content(objectMapper.writeValueAsString(ticketReservationRequestDto)));
 
 		// then
 		MockHttpServletResponse response = resultActions.andExpect(status().isOk())
 			.andReturn().getResponse();
-
 
 		ApiResponse<TicketReservationInfoResponseDto> apiResponse = objectMapper.readValue(
 			response.getContentAsString(),
@@ -297,7 +285,9 @@ public class TicketReservationControllerTest {
 	void getMemberReservationsSuccess() throws Exception {
 		// Given
 		List<TicketReservationInfoResponseDto> reservations = List.of(ticketReservationInfoResponseDto);
-		when(ticketReservationService.getMemberReservations(anyLong()))
+
+		// Facade 메서드 모킹
+		when(ticketReservationFacade.getMemberReservationsFacade(anyLong()))
 			.thenReturn(reservations);
 
 		// When & Then
@@ -308,7 +298,6 @@ public class TicketReservationControllerTest {
 		MockHttpServletResponse response = resultActions.andExpect(status().isOk())
 			.andReturn().getResponse();
 
-
 		ApiResponse<List<TicketReservationInfoResponseDto>> apiResponse = objectMapper.readValue(
 			response.getContentAsString(),
 			new TypeReference<ApiResponse<List<TicketReservationInfoResponseDto>>>() {}
@@ -317,5 +306,4 @@ public class TicketReservationControllerTest {
 		Assertions.assertThat(apiResponse.getStatus()).isEqualTo(200);
 		Assertions.assertThat(apiResponse.getMessage()).isEqualTo("Success");
 	}
-
 }

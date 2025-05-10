@@ -1,8 +1,11 @@
+
+
 package com.flab.tiple.ticket.reservation.service;
 
 import java.util.List;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.flab.tiple.concert.domain.Concert;
@@ -35,16 +38,20 @@ import com.flab.tiple.ticket.waiting.exception.TicketWaitingRegisterException;
 import com.flab.tiple.ticket.waiting.repository.TicketWaitingRepository;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
+@Slf4j
 public class TicketReservationServiceImpl implements TicketReservationService {
 	private final TicketReservationRepository ticketReservationRepository;
 	private final ConcertSeatRepository concertSeatRepository;
 	private final MemberRepository memberRepository;
 	private final ConcertRepository concertRepository;
 	private final TicketWaitingRepository ticketWaitingRepository;
+	private final String SEAT_STATUS_KEY = "seatStatus:";
+	private final int REDIS_KEY_TTL = 30;
 
 	// 티켓 예약 요청
 	@Transactional
@@ -53,6 +60,9 @@ public class TicketReservationServiceImpl implements TicketReservationService {
 		TicketReservationRequestDto requestDto,
 		Long memberId
 	) {
+		log.info("좌석 예약 요청 - 좌석 ID: {}, 회원 ID: {}", requestDto.getSeatId(), memberId);
+		String seatStatusKey = SEAT_STATUS_KEY + requestDto.getSeatId();
+
 		try {
 			// 일반 예약 시도
 			TicketReservationInfoResponseDto reservation = tryReserveSeat(requestDto, memberId);
@@ -71,7 +81,7 @@ public class TicketReservationServiceImpl implements TicketReservationService {
 	}
 
 
-	@Transactional
+	@Transactional(propagation = Propagation.SUPPORTS)
 	public TicketReservationInfoResponseDto tryReserveSeat(
 		TicketReservationRequestDto requestDto,
 		Long memberId
@@ -80,8 +90,9 @@ public class TicketReservationServiceImpl implements TicketReservationService {
 		TicketReservationServiceFindInfo info = findSeatInfo(requestDto.getSeatId(), memberId);
 		// 2. 정보 검증
 		validateSeatReservation(info);
-		// 3. 정보 수정
+		// DB에 예약 처리
 		return processSeatReservation(info);
+
 	}
 
 
@@ -96,15 +107,21 @@ public class TicketReservationServiceImpl implements TicketReservationService {
 			TicketReservationServiceFindInfo info = findSeatInfo(requestDto.getSeatId(), memberId);
 			// 2. 정보 검증
 			validateWaitingRegistration(info);
-			// 3. 정보 수정
+
+			// 3. 동기화된 방식으로 대기 등록 처리
 			return registerWaiting(info);
+
 		} catch (ConcertRemainSeatExistException e) {
-			throw new ConcertRemainSeatExistException(ErrorCode.CONCERT_REMAINING_SEAT_EXIST,
-				ErrorCode.CONCERT_REMAINING_SEAT_EXIST.getDescription());
+			throw new ConcertRemainSeatExistException(
+				ErrorCode.CONCERT_REMAINING_SEAT_EXIST,
+				ErrorCode.CONCERT_REMAINING_SEAT_EXIST.getDescription()
+			);
 		} catch (Exception ex) {
-			System.out.println("error:" + ex.getMessage());
-			throw new TicketWaitingRegisterException(ErrorCode.TICKET_WAITING_ERROR,
-				ErrorCode.TICKET_WAITING_ERROR.getDescription());
+			log.error("웨이팅 등록 오류: {}", ex.getMessage(), ex);
+			throw new TicketWaitingRegisterException(
+				ErrorCode.TICKET_WAITING_ERROR,
+				ErrorCode.TICKET_WAITING_ERROR.getDescription()
+			);
 		}
 	}
 	// 예약 승인

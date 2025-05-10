@@ -86,6 +86,7 @@ public class TicketReservationServiceTest {
 	private Long memberId = 1L;
 	private TicketWaitingResponseDto mockWaitingResponse;
 	private TicketReservationServiceFindInfo ticketReservationServiceFindInfo;
+	private String seatStatusKey = "seatStatus:";
 
 	@BeforeEach
 	void setUp() {
@@ -119,12 +120,14 @@ public class TicketReservationServiceTest {
 
 		// 좌석 생성
 		concertSeat = ConcertSeat.builder()
-			.concert(concert)
+			.concert(concert)  // 반드시 concert 객체 설정
 			.seatNumber(1)
 			.grade(ConcertSeatGrade.A)
 			.status(SeatStatus.AVAILABLE)
 			.build();
 		ReflectionTestUtils.setField(concertSeat, "id", 1L);
+
+		System.out.println("Concert ID in concertSeat: " + concertSeat.getConcert().getId());
 
 		// 티켓 예약 생성
 		ticketReservation = TicketReservation.builder()
@@ -153,6 +156,7 @@ public class TicketReservationServiceTest {
 
 		requestDto = TicketReservationRequestDto.builder()
 			.seatId(1L)
+			.concertId(1L)
 			.build();
 
 		mockWaitingResponse = TicketWaitingResponseDto.builder()
@@ -193,7 +197,7 @@ public class TicketReservationServiceTest {
 		@DisplayName("좌석 정보가 없을 때 예외 발생")
 		void tryReserveSeatSeatNotFoundThrowsException() {
 			when(concertSeatRepository.findById(1L)).thenReturn(Optional.empty());
-
+			String seatStatusTestKey = seatStatusKey+"7";
 			assertThrows(ConcertSeatNotFoundException.class, () ->
 				ticketReservationService.tryReserveSeat(requestDto, memberId)
 			);
@@ -206,7 +210,7 @@ public class TicketReservationServiceTest {
 			when(memberRepository.findById(anyLong())).thenReturn(Optional.of(member));
 			when(concertRepository.findById(anyLong())).thenReturn(Optional.ofNullable(concert));
 			when(concertSeatRepository.findById(anyLong())).thenReturn(Optional.ofNullable(concertSeat));
-
+			String seatStatusTestKey = seatStatusKey+"10";
 			// When
 			TicketReservationInfoResponseDto result = ticketReservationService.tryReserveSeat(requestDto, memberId);
 

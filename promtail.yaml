@@ -1,0 +1,43 @@
+server:
+  http_listen_port: 9080
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  - job_name: system
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: promtail
+          __path__: /var/log/*.log  # 여기서 path를 __path__로 수정
+
+  - job_name: ticket_service
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: ticket_service
+          app: ticket
+          __path__: /logs/ticket-service.log  # 여기서 path를 __path__로 수정
+
+    pipeline_stages:
+      - regex:
+          expression: '(?P<timestamp>\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}\.\d{3}) \| (?P<level>\w+) \| \[(?P<service>[^,]*),(?P<trace_id>[^,]*),(?P<span_id>[^,]*)\] \| (?P<logger>[\w\.]+) \| (?P<method>\w+) (?P<path>[^\s|]*) \| totalTime=(?P<totalTime>[^\s|]*) lockTime=(?P<lockTime>[^\s|]*) stepInfo=(?P<stepInfo>[^\s|]*) retryCount=(?P<retryCount>\d+) errorType=(?P<errorType>[^\s|]*) \| (?P<message>.*)'
+      - labels:
+          level:
+          service:
+          trace_id:
+          span_id:
+          logger:
+          method:
+          path:
+          totalTime:
+          lockTime:
+          stepInfo:
+          retryCount:
+          errorType:
