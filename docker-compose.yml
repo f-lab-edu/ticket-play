@@ -1,8 +1,93 @@
 version: '3.8'
 
 services:
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    user: "$UID:$GID"
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./prometheus-data:/prometheus
+    networks:
+      - app-network
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    user: "$UID:$GID"
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./grafana-data:/var/lib/grafana
+    depends_on:
+      - prometheus
+      - loki
+      - tempo
+      - promtail
+    networks:
+      - app-network
+
+  tempo:
+    image: grafana/tempo:latest
+    command: ["-config.file=/etc/tempo.yaml"]
+    volumes:
+      - ./tempo.yaml:/etc/tempo.yaml
+    ports:
+      - "14250:14250"  # jaeger-grpc
+      - "14268:14268"  # jaeger-http
+      - "9411:9411"    # zipkin
+      - "3200:3200"    # tempo API
+      - "4317:4317"    # otlp-grpc
+      - "4318:4318"    # otlp-http
+      - "9095:9095"    # tempo-query
+    networks:
+      - app-network
+
+  loki:
+    image: grafana/loki:latest
+    command: [ "-config.file=/etc/loki.yaml", "-config.expand-env=true" ]
+    volumes:
+      - ./loki.yaml:/etc/loki.yaml
+      - ./loki-data:/loki
+    ports:
+      - "3100:3100"
+    networks:
+      - app-network
+
+  promtail:
+    image: grafana/promtail:latest
+    command: [ "-config.file=/etc/promtail.yaml" ]
+    volumes:
+      - ./promtail.yaml:/etc/promtail.yaml
+      - ./logs:/logs  # 로그 디렉토리 마운트
+    ports:
+      - "9080:9080"
+    depends_on:
+      - loki
+    networks:
+      - app-network
+
+  redis:
+    image: redis:latest
+    container_name: redis
+    ports:
+      - "6379:6379"
+    # 볼륨을 제거하고 설정을 변경하여 데이터 지속성 비활성화
+    command: redis-server --save "" --appendonly no
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
   server:
     container_name: spring-server
+    volumes:
+      - ./logs:/logs
     # Dockerfile기반으로 build
     build:
       context: .
@@ -16,11 +101,81 @@ services:
       - LANG=C.UTF-8
       - LC_ALL=C.UTF-8
       - JAVA_OPTS=-Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8
+      - SERVER_PORT=8083
+      # Redis 연결 설정 추가
+      - SPRING_REDIS_HOST=redis
+      - SPRING_REDIS_PORT=6379
     ports:
-      - "8080:8080"
+      - "8083:8083"
     # mysql이 제대로 실행되면 실행
     depends_on:
       mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  server2:
+    container_name: spring-server2
+    volumes:
+      - ./logs:/logs
+    # Dockerfile기반으로 build
+    build:
+      context: .
+      dockerfile: Dockerfile
+    # 환경변수 설정 - 인코딩 설정 추가
+    environment:
+      - SPRING_PROFILES_ACTIVE=local-docker
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/tiple?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=UTF-8
+      - SPRING_DATASOURCE_USERNAME=tiple
+      - SPRING_DATASOURCE_PASSWORD=0000
+      - LANG=C.UTF-8
+      - LC_ALL=C.UTF-8
+      - JAVA_OPTS=-Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8
+      - SERVER_PORT=8084
+      # Redis 연결 설정 추가
+      - SPRING_REDIS_HOST=redis
+      - SPRING_REDIS_PORT=6379
+    ports:
+      - "8084:8084"
+    # mysql이 제대로 실행되면 실행
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  server3:
+    container_name: spring-server3
+    volumes:
+      - ./logs:/logs
+    # Dockerfile기반으로 build
+    build:
+      context: .
+      dockerfile: Dockerfile
+    # 환경변수 설정 - 인코딩 설정 추가
+    environment:
+      - SPRING_PROFILES_ACTIVE=local-docker
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/tiple?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=UTF-8
+      - SPRING_DATASOURCE_USERNAME=tiple
+      - SPRING_DATASOURCE_PASSWORD=0000
+      - LANG=C.UTF-8
+      - LC_ALL=C.UTF-8
+      - JAVA_OPTS=-Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8
+      - SERVER_PORT=8085
+      # Redis 연결 설정 추가
+      - SPRING_REDIS_HOST=redis
+      - SPRING_REDIS_PORT=6379
+    ports:
+      - "8085:8085"
+    # mysql이 제대로 실행되면 실행
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     networks:
       - app-network
@@ -41,8 +196,6 @@ services:
       - ./mysql/config:/etc/mysql/conf.d
     ports:
       - "3306:3306"
-    # MySQL이 정상적으로 실행되는지 확인하는 healthcheck 설정.
-    # mysqladmin ping을 실행하여 MySQL이 실행 중인지 확인. -> 10초마다 체크, 5초 동안 응답 없으면 실패 처리, 최대 5회 재시도.
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p0000"]
       interval: 10s
@@ -55,15 +208,10 @@ services:
   nginx:
     image: nginx:latest
     container_name: nginx-server
-    # 왼쪽 포트 (80): 호스트 시스템의 포트 번호
-    # 오른쪽 포트 (80): nginx 컨테이너 내의 포트 번호
-    # **"80:80"**은 호스트의 포트 80을 Nginx 컨테이너의 포트 80으로 연결한다는 의미.
-    # 즉, 외부에서 서버의 포트 80으로 접속하면 Nginx 컨테이너의 포트 80으로 요청이 전달.
     ports:
       - "80:80"
     volumes:
       - ./nginx/conf.d:/etc/nginx/conf.d
-      # 추가: Nginx 기본 설정 파일도 마운트
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf
     environment:
       - NGINX_ENTRYPOINT_QUIET_LOGS=1
@@ -72,11 +220,10 @@ services:
     networks:
       - app-network
 
-# app-network라는 브리지 네트워크를 생성하여, 모든 서비스가 동일한 네트워크에서 통신할 수 있도록 함
 networks:
   app-network:
     driver: bridge
 
-# mysql-data라는 볼륨을 생성하여 MySQL 데이터가 컨테이너가 종료되더라도 유지되도록 함.
-#volumes:
+# Redis 볼륨을 제거하여 컨테이너 재시작 시 데이터가 유지되지 않도록 함
+# volumes:
 #  mysql-data:

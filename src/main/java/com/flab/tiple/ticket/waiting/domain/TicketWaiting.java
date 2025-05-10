@@ -21,10 +21,12 @@ import lombok.AccessLevel;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.ToString;
 
 @Entity
 @Getter
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
+@ToString
 public class TicketWaiting extends BaseTime {
 	@Id
 	@GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -65,14 +67,4 @@ public class TicketWaiting extends BaseTime {
 		this.status = status;
 	}
 
-	@Override
-	public String toString() {
-		return "TicketWaiting{" +
-			"id=" + id +
-			", concert=" + concert +
-			", member=" + member +
-			", waitingNumber=" + waitingNumber +
-			", status=" + status +
-			'}';
-	}
 }

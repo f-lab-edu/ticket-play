@@ -75,6 +75,19 @@ dependencies {
 
 	//mysql 커넥터 추가
 	implementation 'mysql:mysql-connector-java:8.0.32'
+
+	// redis
+	implementation 'org.redisson:redisson-spring-boot-starter:3.27.0'
+	implementation 'org.springframework.boot:spring-boot-starter-data-redis'
+
+	testCompileOnly 'org.projectlombok:lombok'
+	testAnnotationProcessor 'org.projectlombok:lombok'
+
+	implementation 'org.springframework.boot:spring-boot-starter-actuator'
+	runtimeOnly 'io.micrometer:micrometer-registry-prometheus'
+
+	implementation 'io.micrometer:micrometer-tracing-bridge-otel'
+	implementation 'io.opentelemetry:opentelemetry-exporter-zipkin'
 }
 
 //ext {} 블록 (전역 변수 설정)
