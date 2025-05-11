@@ -24,7 +24,28 @@ spring:
           http:
             server:
               requests: true
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVER:localhost:9093}
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        spring.json.type.mapping: ticketRequest:com.example.ticketing.kafka.TicketReservationMessage,ticketResult:com.example.ticketing.kafka.TicketReservationResultMessage
+    consumer:
+      group-id: ticketing-service
+      auto-offset-reset: latest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: com.example.ticketing.kafka
+        spring.json.type.mapping: ticketRequest:com.example.ticketing.kafka.TicketReservationMessage,ticketResult:com.example.ticketing.kafka.TicketReservationResultMessage
 
+ticketing:
+  kafka:
+    topics:
+      ticket-request: ticket-reservation-requests
+      ticket-result: ticket-reservation-results
+      ticket-waiting: ticket-waiting-queue
 
 server:
   port: ${PORT:8080}
@@ -72,6 +93,7 @@ management:
     metrics:
       export:
         enabled: true
+
 
 ---
 # 로컬 개발 환경 (H2 데이터베이스 사용)
@@ -144,3 +166,4 @@ spring:
         pool:
           max-active: 8
       connect-timeout: 20
+

@@ -88,6 +88,8 @@ dependencies {
 
 	implementation 'io.micrometer:micrometer-tracing-bridge-otel'
 	implementation 'io.opentelemetry:opentelemetry-exporter-zipkin'
+
+	implementation 'org.springframework.kafka:spring-kafka'
 }
 
 //ext {} 블록 (전역 변수 설정)
