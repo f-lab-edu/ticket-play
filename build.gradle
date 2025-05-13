@@ -90,6 +90,7 @@ dependencies {
 	implementation 'io.opentelemetry:opentelemetry-exporter-zipkin'
 
 	implementation 'org.springframework.kafka:spring-kafka'
+	testImplementation 'org.springframework.kafka:spring-kafka-test'
 }
 
 //ext {} 블록 (전역 변수 설정)

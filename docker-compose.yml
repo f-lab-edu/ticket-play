@@ -83,6 +83,8 @@ services:
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - app-network
   kafka:
     image: confluentinc/cp-kafka:7.4.0
     container_name: kafka
@@ -91,22 +93,30 @@ services:
         condition: service_healthy
     ports:
       - "9094:9092"  # 외부 포트를 9094로 변경 (내부는 그대로 9092 유지)
-      - "9096:9093"  # 9093도 변경
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:9093
+      #PLAINTEXT: 보통 Kafka 클러스터 내부 통신에 사용되는 리스너
+      #PLAINTEXT_HOST: 외부(호스트 머신)에서 접근하기 위한 리스너를 지칭
+      #KAFKA_ADVERTISED_LISTENERS: 어드버타이즈드 리스너: 클라이언트에게 알릴 연결 주소
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:9094
+      # 리스너 보안 프로토콜 매핑
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      # 브로커 간 통신에 사용할 리스너
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
-      KAFKA_DELETE_TOPIC_ENABLE: "true"
-      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
+      # 토픽 설정
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1  # 오프셋 토픽 복제 팩터
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"    # 자동 토픽 생성 활성화
+      KAFKA_DELETE_TOPIC_ENABLE: "true"          # 토픽 삭제 활성화
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0  # 그룹 리밸런싱 초기 지연
     healthcheck:
       test: ["CMD", "kafka-topics", "--bootstrap-server", "localhost:9092", "--list"]
       interval: 10s
       timeout: 5s
       retries: 5
+    networks:
+      - app-network
+
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
     container_name: kafka-ui
@@ -119,7 +129,8 @@ services:
       KAFKA_CLUSTERS_0_NAME: local
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
       KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
-
+    networks:
+      - app-network
 
   redis:
     image: redis:latest
@@ -165,6 +176,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      kafka:
+        condition: service_healthy
     networks:
       - app-network
 
@@ -197,6 +210,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
+      kafka:
+        condition: service_healthy
     networks:
       - app-network
 
@@ -228,6 +243,8 @@ services:
       mysql:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      kafka:
         condition: service_healthy
     networks:
       - app-network
