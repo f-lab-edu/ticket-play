@@ -194,9 +194,9 @@ public class TicketReservationControllerTest {
 				.data(ticketWaitingResponseDto)
 				.build();
 
-		// Facade 메서드 모킹
-		when(ticketReservationFacade.requestReservationFacade(any(), anyLong()))
-			.thenReturn(any(TicketReservationResponseDto.class));
+		// Facade 메서드 모킹 - 여기가 수정된 부분
+		when(ticketReservationFacade.requestReservationFacade(any(TicketReservationRequestDto.class), anyLong()))
+			.thenReturn((TicketReservationResponseDto) responseDto);
 
 		ResultActions resultActions = mockMvc.perform(post("/api/ticket-reservations/request")
 			.contentType(MediaType.APPLICATION_JSON)
