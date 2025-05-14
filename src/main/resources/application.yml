@@ -25,20 +25,25 @@ spring:
             server:
               requests: true
   kafka:
-    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVER:localhost:9093}
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVER:kafka:9092}
+    properties:
+      enable.telemetry: false
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
       properties:
-        spring.json.type.mapping: ticketRequest:com.example.ticketing.kafka.TicketReservationMessage,ticketResult:com.example.ticketing.kafka.TicketReservationResultMessage
+        spring.json.type.mapping: ticketRequest:com.flab.tiple.ticket.reservation.dto.message.TicketReservationMessage,ticketResult:com.flab.tiple.ticket.reservation.dto.message.TicketReservationResultMessage
     consumer:
+      auto-offset-reset: earliest
+      enable-auto-commit: true
+      max-poll-records: 500
+      heartbeat-interval: 3000
       group-id: ticketing-service
-      auto-offset-reset: latest
       key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
       value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
       properties:
-        spring.json.trusted.packages: com.example.ticketing.kafka
-        spring.json.type.mapping: ticketRequest:com.example.ticketing.kafka.TicketReservationMessage,ticketResult:com.example.ticketing.kafka.TicketReservationResultMessage
+        spring.json.trusted.packages: com.flab.tiple.ticket.reservation.dto.message
+        spring.json.type.mapping: ticketRequest:com.flab.tiple.ticket.reservation.dto.message.TicketReservationMessage,ticketResult:com.flab.tiple.ticket.reservation.dto.message.TicketReservationResultMessage
 
 ticketing:
   kafka:
@@ -48,7 +53,7 @@ ticketing:
       ticket-waiting: ticket-waiting-queue
 
 server:
-  port: ${PORT:8080}
+  port: ${PORT:8083}
   forward-headers-strategy: native # 서버가 요청 헤더를 어떻게 처리할지 지정
   servlet:
     encoding:
@@ -62,12 +67,16 @@ server:
 
 logging:
   level:
+    org.apache.kafka.clients: WARN
     org.hibernate.SQL: debug
     org.hibernate.type: trace
     org.hibernate.resource.transaction: debug
     org.springframework.transaction: debug
     org.springframework.orm.jpa: debug
     root: info
+    org.apache.kafka: DEBUG
+    org.springframework.kafka: DEBUG
+    com.example.ticketing: DEBUG
 #  pattern:
 #    console: " [${spring.application.name:}] | %logger{36} | %X{method} %X{path} | totalTime=%X{totalTime:-0ms} lockTime=%X{lockTime:-0ms} firstLockTime=%X{firstLockTime:-none} secondLockTime=%X{secondLockTime:-0}| %msg%n"
 #    file: "[${spring.application.name:}] | %logger{36} | %X{method} %X{path} | totalTime=%X{totalTime:-0ms} lockTime=%X{lockTime:-0ms} firstLockTime=%X{firstLockTime:-none} secondLockTime=%X{secondLockTime:-0} | %msg%n"
