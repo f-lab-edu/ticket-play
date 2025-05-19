@@ -10,14 +10,12 @@ import lombok.NoArgsConstructor;
 public class TicketWaitingInfoResponseDto {
 	private Integer waitingNumber;
 	private Long concertId;
-	private String concertName;
 	private String status;
 
 	@Builder
-	public TicketWaitingInfoResponseDto(Integer waitingNumber, Long concertId, String concertName, String status) {
+	public TicketWaitingInfoResponseDto(Integer waitingNumber, Long concertId, String status) {
 		this.waitingNumber = waitingNumber;
 		this.concertId = concertId;
-		this.concertName = concertName;
 		this.status = status;
 	}
 }

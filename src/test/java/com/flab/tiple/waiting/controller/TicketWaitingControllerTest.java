@@ -43,6 +43,7 @@ import com.flab.tiple.ticket.waiting.controller.TicketWaitingController;
 import com.flab.tiple.ticket.waiting.dto.response.TicketWaitingCancelResponseDto;
 import com.flab.tiple.ticket.waiting.dto.response.TicketWaitingInfoResponseDto;
 import com.flab.tiple.ticket.waiting.enums.TicketWaitingStatus;
+import com.flab.tiple.ticket.waiting.facade.TicketWaitingFacade;
 import com.flab.tiple.ticket.waiting.service.TicketWaitingService;
 
 @WebMvcTest(
@@ -60,8 +61,9 @@ public class TicketWaitingControllerTest {
 	@Autowired
 	private ObjectMapper objectMapper;
 
+	// TicketWaitingService 대신 TicketWaitingFacade를 모킹
 	@MockitoBean
-	private TicketWaitingService ticketWaitingService;
+	private TicketWaitingFacade ticketWaitingFacade;
 
 	@MockitoBean
 	private JwtTokenUtil jwtTokenUtil;
@@ -92,7 +94,6 @@ public class TicketWaitingControllerTest {
 		SecurityContextHolder.getContext().setAuthentication(authentication);
 
 		// LoginCheckAspect에서 getCurrentMemberId() 메소드의 반환값 설정
-		// 이 부분이 중요: LoginCheckAspect의 동작을 모킹
 		try {
 			Field field = LoginCheckAspect.class.getDeclaredField("currentMemberId");
 			field.setAccessible(true);
@@ -111,22 +112,22 @@ public class TicketWaitingControllerTest {
 		ticketWaitingInfoResponseDto = TicketWaitingInfoResponseDto.builder()
 			.waitingNumber(1)
 			.concertId(1L)
-			.concertName("콘서트명")
-			.status("status")
+			.status("WAITING")
 			.build();
 	}
 
 	@Test
 	@DisplayName("티켓 waiting 취소 - /api/ticket-waiting/{waitingId}/cancel")
 	void cancelWaitingSuccess() throws Exception {
-		// Given
-		when(ticketWaitingService.cancelWaiting(anyLong(), anyLong())).thenReturn(ticketWaitingCancelResponseDto);
+		// Given - TicketWaitingFacade 모킹
+		doReturn(ticketWaitingCancelResponseDto).when(ticketWaitingFacade)
+			.cancelWaitingFacade(anyLong(), anyLong());
 
 		// When
 		ResultActions resultActions = mockMvc.perform(delete("/api/ticket-waiting/1/cancel")
-			.contentType(MediaType.APPLICATION_JSON)
-			.content(objectMapper.writeValueAsString(ticketWaitingCancelResponseDto)));
+			.contentType(MediaType.APPLICATION_JSON));
 
+		// Then
 		MockHttpServletResponse response = resultActions.andExpect(status().isOk())
 			.andReturn().getResponse();
 
@@ -140,19 +141,23 @@ public class TicketWaitingControllerTest {
 		Assertions.assertThat(apiResponse.getData()).usingRecursiveComparison().isEqualTo(
 			ticketWaitingCancelResponseDto);
 
+		// Facade 메서드 호출 검증
+		verify(ticketWaitingFacade).cancelWaitingFacade(eq(1L), eq(1L));
 	}
 
 	@Test
 	@DisplayName("내 waiting목록 조회 - /api/ticket-waiting/my-waiting")
 	void getMemberWaitingListSuccess() throws Exception {
-		// Given
+		// Given - TicketWaitingFacade 모킹
 		List<TicketWaitingInfoResponseDto> waitings = List.of(ticketWaitingInfoResponseDto);
-		when(ticketWaitingService.getMemberWaitingList(anyLong())).thenReturn(waitings);
+		doReturn(waitings).when(ticketWaitingFacade)
+			.getMemberWaitingListFacade(anyLong());
 
 		// When
 		ResultActions resultActions = mockMvc.perform(get("/api/ticket-waiting/my-waiting")
 			.contentType(MediaType.APPLICATION_JSON));
 
+		// Then
 		MockHttpServletResponse response = resultActions.andExpect(status().isOk())
 			.andReturn().getResponse();
 
@@ -163,5 +168,12 @@ public class TicketWaitingControllerTest {
 
 		Assertions.assertThat(apiResponse.getStatus()).isEqualTo(200);
 		Assertions.assertThat(apiResponse.getMessage()).isEqualTo("Success");
+		Assertions.assertThat(apiResponse.getData()).hasSize(1);
+		Assertions.assertThat(apiResponse.getData().get(0)).usingRecursiveComparison().isEqualTo(
+			ticketWaitingInfoResponseDto);
+
+		// Facade 메서드 호출 검증
+		verify(ticketWaitingFacade).getMemberWaitingListFacade(eq(1L));
 	}
+
 }

@@ -23,6 +23,9 @@ public enum ErrorCode {
     TICKET_RESERVATION_NOT_FOUND("예약된 티켓을 찾을 수 없습니다",400),
     TICKET_RESERVATION_NOT_POSSIBLE_STATUS("티켓이 예매 가능한 상태가 아닙니다",400),
     TICKET_RESERVATION_NOT_CANCEL_STATUS("티켓이 취소 가능한 상태가 아닙니다",400),
+    TICKET_RESERVATION_TIMEOUT("티켓 예매 가능 시간이 종료되었습니다.",400),
+    TICKET_RESERVATION_ERROR("티켓 예매 중 에러가 발생하였습니다.",400),
+    TICKET_WAITING_NOT_CANCELABLE("티켓 취소가 불가합니다.",400),
 
     //티켓 웨이팅 관련 에러
     TICKET_WAITING_ERROR("티켓팅 예약 중 에러가 발생했습니다.",400),

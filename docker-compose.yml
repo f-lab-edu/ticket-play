@@ -1,136 +1,136 @@
 version: '3.8'
 
 services:
-  prometheus:
-    image: prom/prometheus:latest
-    container_name: prometheus
-    user: "$UID:$GID"
-    ports:
-      - "9090:9090"
-    volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml
-      - ./prometheus-data:/prometheus
-    networks:
-      - app-network
+#  prometheus:
+#    image: prom/prometheus:latest
+#    container_name: prometheus
+#    user: "$UID:$GID"
+#    ports:
+#      - "9090:9090"
+#    volumes:
+#      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+#      - ./prometheus-data:/prometheus
+#    networks:
+#      - app-network
+#
+#  grafana:
+#    image: grafana/grafana:latest
+#    container_name: grafana
+#    user: "$UID:$GID"
+#    ports:
+#      - "3000:3000"
+#    volumes:
+#      - ./grafana-data:/var/lib/grafana
+#    depends_on:
+#      - prometheus
+#      - loki
+#      - tempo
+#      - promtail
+#    networks:
+#      - app-network
+#
+#  tempo:
+#    image: grafana/tempo:latest
+#    command: ["-config.file=/etc/tempo.yaml"]
+#    volumes:
+#      - ./tempo.yaml:/etc/tempo.yaml
+#    ports:
+#      - "14250:14250"  # jaeger-grpc
+#      - "14268:14268"  # jaeger-http
+#      - "9411:9411"    # zipkin
+#      - "3200:3200"    # tempo API
+#      - "4317:4317"    # otlp-grpc
+#      - "4318:4318"    # otlp-http
+#      - "9095:9095"    # tempo-query
+#    networks:
+#      - app-network
+#
+#  loki:
+#    image: grafana/loki:latest
+#    command: [ "-config.file=/etc/loki.yaml", "-config.expand-env=true" ]
+#    volumes:
+#      - ./loki.yaml:/etc/loki.yaml
+#      - ./loki-data:/loki
+#    ports:
+#      - "3100:3100"
+#    networks:
+#      - app-network
+#
+#  promtail:
+#    image: grafana/promtail:latest
+#    command: [ "-config.file=/etc/promtail.yaml" ]
+#    volumes:
+#      - ./promtail.yaml:/etc/promtail.yaml
+#      - ./logs:/logs  # 로그 디렉토리 마운트
+#    ports:
+#      - "9080:9080"
+#    depends_on:
+#      - loki
+#    networks:
+#      - app-network
 
-  grafana:
-    image: grafana/grafana:latest
-    container_name: grafana
-    user: "$UID:$GID"
-    ports:
-      - "3000:3000"
-    volumes:
-      - ./grafana-data:/var/lib/grafana
-    depends_on:
-      - prometheus
-      - loki
-      - tempo
-      - promtail
-    networks:
-      - app-network
 
-  tempo:
-    image: grafana/tempo:latest
-    command: ["-config.file=/etc/tempo.yaml"]
-    volumes:
-      - ./tempo.yaml:/etc/tempo.yaml
-    ports:
-      - "14250:14250"  # jaeger-grpc
-      - "14268:14268"  # jaeger-http
-      - "9411:9411"    # zipkin
-      - "3200:3200"    # tempo API
-      - "4317:4317"    # otlp-grpc
-      - "4318:4318"    # otlp-http
-      - "9095:9095"    # tempo-query
-    networks:
-      - app-network
-
-  loki:
-    image: grafana/loki:latest
-    command: [ "-config.file=/etc/loki.yaml", "-config.expand-env=true" ]
-    volumes:
-      - ./loki.yaml:/etc/loki.yaml
-      - ./loki-data:/loki
-    ports:
-      - "3100:3100"
-    networks:
-      - app-network
-
-  promtail:
-    image: grafana/promtail:latest
-    command: [ "-config.file=/etc/promtail.yaml" ]
-    volumes:
-      - ./promtail.yaml:/etc/promtail.yaml
-      - ./logs:/logs  # 로그 디렉토리 마운트
-    ports:
-      - "9080:9080"
-    depends_on:
-      - loki
-    networks:
-      - app-network
-
-
-  zookeeper:
-    image: confluentinc/cp-zookeeper:7.4.0
-    container_name: zookeeper
-    environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 2000
-    ports:
-      - "2181:2181"
-    healthcheck:
-      test: [ "CMD", "bash", "-c", "echo srvr | nc localhost 2181 | grep 'Mode:'" ]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - app-network
-  kafka:
-    image: confluentinc/cp-kafka:7.4.0
-    container_name: kafka
-    depends_on:
-      zookeeper:
-        condition: service_healthy
-    ports:
-      - "9094:9092"  # 외부 포트를 9094로 변경 (내부는 그대로 9092 유지)
-    environment:
-      KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      #PLAINTEXT: 보통 Kafka 클러스터 내부 통신에 사용되는 리스너
-      #PLAINTEXT_HOST: 외부(호스트 머신)에서 접근하기 위한 리스너를 지칭
-      #KAFKA_ADVERTISED_LISTENERS: 어드버타이즈드 리스너: 클라이언트에게 알릴 연결 주소
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:9094
-      # 리스너 보안 프로토콜 매핑
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-      # 브로커 간 통신에 사용할 리스너
-      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-      # 토픽 설정
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1  # 오프셋 토픽 복제 팩터
-      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"    # 자동 토픽 생성 활성화
-      KAFKA_DELETE_TOPIC_ENABLE: "true"          # 토픽 삭제 활성화
-      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0  # 그룹 리밸런싱 초기 지연
-    healthcheck:
-      test: ["CMD", "kafka-topics", "--bootstrap-server", "localhost:9092", "--list"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-    networks:
-      - app-network
-
-  kafka-ui:
-    image: provectuslabs/kafka-ui:latest
-    container_name: kafka-ui
-    depends_on:
-      kafka:
-        condition: service_healthy
-    ports:
-      - "8080:8080"
-    environment:
-      KAFKA_CLUSTERS_0_NAME: local
-      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
-      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
-    networks:
-      - app-network
+#  zookeeper:
+#    image: confluentinc/cp-zookeeper:7.4.0
+#    container_name: zookeeper
+#    environment:
+#      ZOOKEEPER_CLIENT_PORT: 2181
+#      ZOOKEEPER_TICK_TIME: 2000
+#    ports:
+#      - "2181:2181"
+#    healthcheck:
+#      test: [ "CMD", "bash", "-c", "echo srvr | nc localhost 2181 | grep 'Mode:'" ]
+#      interval: 10s
+#      timeout: 5s
+#      retries: 5
+#    networks:
+#      - app-network
+#  kafka:
+#    image: confluentinc/cp-kafka:7.4.0
+#    container_name: kafka
+#    depends_on:
+#      zookeeper:
+#        condition: service_healthy
+#    ports:
+#      - "9094:9092"  # 외부 포트를 9094로 변경 (내부는 그대로 9092 유지)
+#    environment:
+#      KAFKA_BROKER_ID: 1
+#      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+#      #PLAINTEXT: 보통 Kafka 클러스터 내부 통신에 사용되는 리스너
+#      #PLAINTEXT_HOST: 외부(호스트 머신)에서 접근하기 위한 리스너를 지칭
+#      #KAFKA_ADVERTISED_LISTENERS: 어드버타이즈드 리스너: 클라이언트에게 알릴 연결 주소
+#      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:9094
+#      # 리스너 보안 프로토콜 매핑
+#      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+#      # 브로커 간 통신에 사용할 리스너
+#      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+#      # 토픽 설정
+#      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1  # 오프셋 토픽 복제 팩터
+#      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"    # 자동 토픽 생성 활성화
+#      KAFKA_DELETE_TOPIC_ENABLE: "true"          # 토픽 삭제 활성화
+#      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0  # 그룹 리밸런싱 초기 지연
+#    healthcheck:
+#      test: ["CMD", "kafka-topics", "--bootstrap-server", "localhost:9092", "--list"]
+#      interval: 10s
+#      timeout: 5s
+#      retries: 5
+#    networks:
+#      - app-network
+#
+#  kafka-ui:
+#    image: provectuslabs/kafka-ui:latest
+#    container_name: kafka-ui
+#    depends_on:
+#      kafka:
+#        condition: service_healthy
+#    ports:
+#      - "8080:8080"
+#    environment:
+#      KAFKA_CLUSTERS_0_NAME: local
+#      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+#      KAFKA_CLUSTERS_0_ZOOKEEPER: zookeeper:2181
+#    networks:
+#      - app-network
 
   redis:
     image: redis:latest
@@ -176,8 +176,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      kafka:
-        condition: service_healthy
+#      kafka:
+#        condition: service_healthy
     networks:
       - app-network
 
@@ -210,8 +210,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      kafka:
-        condition: service_healthy
+#      kafka:
+#        condition: service_healthy
     networks:
       - app-network
 
@@ -244,8 +244,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      kafka:
-        condition: service_healthy
+#      kafka:
+#        condition: service_healthy
     networks:
       - app-network
 
