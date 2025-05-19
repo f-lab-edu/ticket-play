@@ -5,7 +5,7 @@ import org.springframework.data.redis.connection.MessageListener;
 import org.springframework.stereotype.Component;
 
 import com.flab.tiple.global.message.TipleRedisKey;
-import com.flab.tiple.ticket.reservation.service.TicketReservationService;
+import com.flab.tiple.ticket.reservation.domain.service.TicketReservationService;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
