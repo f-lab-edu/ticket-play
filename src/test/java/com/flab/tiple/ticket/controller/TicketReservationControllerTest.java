@@ -4,7 +4,6 @@ import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
-import static org.mockito.BDDMockito.given;
 
 import static org.mockito.Mockito.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -42,9 +41,11 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.flab.tiple.concert.dto.response.ConcertSeatInfo;
 import com.flab.tiple.concert.enums.ConcertSeatGrade;
+import com.flab.tiple.concert.exception.ConcertRemainSeatExistException;
 import com.flab.tiple.global.auth.aop.LoginCheckAspect;
 import com.flab.tiple.global.config.MockBeanConfig;
 import com.flab.tiple.global.config.TestSecurityConfig;
+import com.flab.tiple.global.exception.ErrorCode;
 import com.flab.tiple.global.response.ApiResponse;
 import com.flab.tiple.global.security.JwtTokenProvider;
 import com.flab.tiple.global.security.SecurityConfig;
@@ -75,7 +76,7 @@ public class TicketReservationControllerTest {
 	@Autowired
 	private ObjectMapper objectMapper;
 
-	// TicketReservationService 대신 TicketReservationFacade를 모킹
+	// Using TicketReservationFacade instead of TicketReservationService
 	@MockitoBean
 	private TicketReservationFacade ticketReservationFacade;
 
@@ -134,6 +135,7 @@ public class TicketReservationControllerTest {
 		// 샘플 요청 DTO 생성
 		ticketReservationRequestDto = TicketReservationRequestDto.builder()
 			.seatId(1L)
+			.concertId(1L) // 추가: concertId가 Facade에서 필요함
 			.build();
 
 		ticketWaitingResponseDto = TicketWaitingResponseDto.builder()
@@ -150,11 +152,11 @@ public class TicketReservationControllerTest {
 		// Given
 		TicketReservationResponseDto<TicketReservationInfoResponseDto> responseDto =
 			TicketReservationResponseDto.<TicketReservationInfoResponseDto>builder()
-				.status(TicketProcessStatus.WAITING)
+				.status(TicketProcessStatus.SUCCESS) // Changed: SUCCESS matches the controller's logic
 				.data(ticketReservationInfoResponseDto)
 				.build();
 
-		// Facade 메서드 모킹 (Service 대신)
+		// Facade 메서드 모킹 (Service 대신) - doReturn().when() 방식 사용
 		doReturn(responseDto).when(ticketReservationFacade)
 			.requestReservationFacade(any(TicketReservationRequestDto.class), anyLong());
 
@@ -182,6 +184,12 @@ public class TicketReservationControllerTest {
 
 		Long currentMemberId = LoginCheckAspect.getCurrentMemberId();
 		assertThat(currentMemberId).isEqualTo(1L);
+
+		// Verify that the facade method was called with the correct parameters
+		verify(ticketReservationFacade).requestReservationFacade(
+			argThat(dto -> dto.getSeatId().equals(1L) && dto.getConcertId().equals(1L)),
+			eq(1L)
+		);
 	}
 
 	@Test
@@ -194,9 +202,10 @@ public class TicketReservationControllerTest {
 				.data(ticketWaitingResponseDto)
 				.build();
 
-		// Facade 메서드 모킹 - 여기가 수정된 부분
-		when(ticketReservationFacade.requestReservationFacade(any(TicketReservationRequestDto.class), anyLong()))
-			.thenReturn((TicketReservationResponseDto) responseDto);
+		// Facade 메서드 모킹 - doReturn().when() 방식 사용
+		doReturn(responseDto).when(ticketReservationFacade)
+			.requestReservationFacade(any(TicketReservationRequestDto.class), anyLong());
+
 
 		ResultActions resultActions = mockMvc.perform(post("/api/ticket-reservations/request")
 			.contentType(MediaType.APPLICATION_JSON)
@@ -218,6 +227,12 @@ public class TicketReservationControllerTest {
 			.usingRecursiveComparison()
 			.ignoringFields("createdAt")
 			.isEqualTo(responseDto);
+
+		// Verify that the facade method was called with the correct parameters
+		verify(ticketReservationFacade).requestReservationFacade(
+			argThat(dto -> dto.getSeatId().equals(1L) && dto.getConcertId().equals(1L)),
+			eq(1L)
+		);
 	}
 
 	@Test
@@ -227,13 +242,12 @@ public class TicketReservationControllerTest {
 		ReflectionTestUtils.setField(ticketReservationInfoResponseDto, "status", TicketReservationStatus.APPROVED);
 
 		// Facade 메서드 모킹
-		doReturn(ticketReservationInfoResponseDto).when(ticketReservationFacade)
-			.approveReservationFacade(anyLong(), anyLong());
+		when(ticketReservationFacade.approveReservationFacade(anyLong(), anyLong()))
+			.thenReturn(ticketReservationInfoResponseDto);
 
 		// When
 		ResultActions resultActions = mockMvc.perform(post("/api/ticket-reservations/1/approve")
-			.contentType(MediaType.APPLICATION_JSON)
-			.content(objectMapper.writeValueAsString(ticketReservationRequestDto)));
+			.contentType(MediaType.APPLICATION_JSON));
 
 		// then
 		MockHttpServletResponse response = resultActions.andExpect(status().isOk())
@@ -248,6 +262,9 @@ public class TicketReservationControllerTest {
 		Assertions.assertThat(apiResponse.getMessage()).isEqualTo("Success");
 		Assertions.assertThat(apiResponse.getData()).usingRecursiveComparison().isEqualTo(
 			ticketReservationInfoResponseDto);
+
+		// Verify that the facade method was called with the correct parameters
+		verify(ticketReservationFacade).approveReservationFacade(eq(1L), eq(1L));
 	}
 
 	@Test
@@ -262,8 +279,7 @@ public class TicketReservationControllerTest {
 
 		// When
 		ResultActions resultActions = mockMvc.perform(delete("/api/ticket-reservations/1/cancel")
-			.contentType(MediaType.APPLICATION_JSON)
-			.content(objectMapper.writeValueAsString(ticketReservationRequestDto)));
+			.contentType(MediaType.APPLICATION_JSON));
 
 		// then
 		MockHttpServletResponse response = resultActions.andExpect(status().isOk())
@@ -278,6 +294,9 @@ public class TicketReservationControllerTest {
 		Assertions.assertThat(apiResponse.getMessage()).isEqualTo("Success");
 		Assertions.assertThat(apiResponse.getData()).usingRecursiveComparison().isEqualTo(
 			ticketReservationInfoResponseDto);
+
+		// Verify that the facade method was called with the correct parameters
+		verify(ticketReservationFacade).cancelReservationFacade(eq(1L), eq(1L));
 	}
 
 	@Test
@@ -305,5 +324,12 @@ public class TicketReservationControllerTest {
 
 		Assertions.assertThat(apiResponse.getStatus()).isEqualTo(200);
 		Assertions.assertThat(apiResponse.getMessage()).isEqualTo("Success");
+		Assertions.assertThat(apiResponse.getData()).hasSize(1);
+		Assertions.assertThat(apiResponse.getData().get(0)).usingRecursiveComparison().isEqualTo(
+			ticketReservationInfoResponseDto);
+
+		// Verify that the facade method was called with the correct parameters
+		verify(ticketReservationFacade).getMemberReservationsFacade(eq(1L));
 	}
+
 }
