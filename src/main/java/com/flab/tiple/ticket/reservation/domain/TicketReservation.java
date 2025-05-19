@@ -78,6 +78,10 @@ public class TicketReservation extends BaseTime {
 		}
 	}
 
+	public void timeout() {
+		this.status = TicketReservationStatus.TIMEOUT;
+	}
+
 	public void checkMatchMember(Member member) {
 		if (!this.member.equals(member)) {
 			throw new MemberNotMatchException(ErrorCode.MEMBER_NOT_MATCH,
