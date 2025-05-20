@@ -17,4 +17,5 @@ public interface TicketReservationService {
 		Long memberId
 	);
 	List<TicketReservationInfoResponseDto> getMemberReservations(Long memberId);
+	void handleReservationTimeout(Long seatId, Long memberId);
 }
