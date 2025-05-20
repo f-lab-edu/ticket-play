@@ -13,7 +13,7 @@ import com.flab.tiple.global.auth.aop.LoginCheckAspect;
 import com.flab.tiple.global.response.ApiResponse;
 import com.flab.tiple.ticket.waiting.dto.response.TicketWaitingCancelResponseDto;
 import com.flab.tiple.ticket.waiting.dto.response.TicketWaitingInfoResponseDto;
-import com.flab.tiple.ticket.waiting.service.TicketWaitingService;
+import com.flab.tiple.ticket.waiting.facade.TicketWaitingFacade;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -21,25 +21,28 @@ import lombok.RequiredArgsConstructor;
 @RestController
 @RequestMapping("/api/ticket-waiting")
 @RequiredArgsConstructor
-@Tag(name = "ticket-waiting", description = "티켓 웨이팅 관련 API")
+@Tag(name = "ticket-waiting", description = "티켓 대기 관련 API")
 public class TicketWaitingController {
-	private final TicketWaitingService ticketWaitingService;
+	private final TicketWaitingFacade ticketWaitingFacade;
 
+	// 티켓 대기 취소
 	@DeleteMapping("/{waitingId}/cancel")
-	@LoginCheck
+	@LoginCheck(required = true)
 	public ApiResponse<TicketWaitingCancelResponseDto> cancelWaiting(
 		@PathVariable Long waitingId
 	) {
 		Long memberId = LoginCheckAspect.getCurrentMemberId();
-		TicketWaitingCancelResponseDto waiting = ticketWaitingService.cancelWaiting(waitingId, memberId);
-		return ApiResponse.success(waiting);
+		TicketWaitingCancelResponseDto result = ticketWaitingFacade.cancelWaitingFacade(waitingId, memberId);
+		return ApiResponse.success(result);
 	}
 
+	// 회원의 대기 목록 조회
 	@GetMapping("/my-waiting")
 	@LoginCheck(required = true)
 	public ApiResponse<List<TicketWaitingInfoResponseDto>> getMemberWaitingList() {
 		Long memberId = LoginCheckAspect.getCurrentMemberId();
-		List<TicketWaitingInfoResponseDto> waitingList = ticketWaitingService.getMemberWaitingList(memberId);
+		List<TicketWaitingInfoResponseDto> waitingList = ticketWaitingFacade.getMemberWaitingListFacade(memberId);
 		return ApiResponse.success(waitingList);
 	}
+
 }
