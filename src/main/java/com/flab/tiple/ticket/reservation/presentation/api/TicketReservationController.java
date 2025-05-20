@@ -10,8 +10,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.flab.tiple.global.auth.aop.LoginCheck;
-import com.flab.tiple.global.auth.aop.LoginCheckAspect;
+import com.flab.tiple.global.aop.LoginCheck;
+import com.flab.tiple.global.aop.LoginCheckAspect;
 import com.flab.tiple.global.response.ApiResponse;
 import com.flab.tiple.ticket.reservation.application.dto.request.TicketReservationRequestDto;
 import com.flab.tiple.ticket.reservation.application.dto.response.TicketReservationInfoResponseDto;

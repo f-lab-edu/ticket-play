@@ -16,9 +16,8 @@ import org.springframework.data.redis.listener.PatternTopic;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
-import org.springframework.data.redis.serializer.StringRedisSerializer;
 
-import com.flab.tiple.global.listner.RedisKeyExpirationListener;
+import com.flab.tiple.global.listener.RedisKeyExpirationListener;
 
 @Configuration
 @Profile("!test") // 테스트 프로파일이 아닐 때만 이 설정 사용

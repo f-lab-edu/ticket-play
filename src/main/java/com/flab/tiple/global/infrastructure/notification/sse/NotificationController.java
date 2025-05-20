@@ -1,13 +1,12 @@
-package com.flab.tiple.sse.controller;
+package com.flab.tiple.global.infrastructure.notification.sse;
 
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
-import com.flab.tiple.global.auth.aop.LoginCheck;
-import com.flab.tiple.global.auth.aop.LoginCheckAspect;
-import com.flab.tiple.sse.service.SseEmitterService;
+import com.flab.tiple.global.aop.LoginCheck;
+import com.flab.tiple.global.aop.LoginCheckAspect;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;

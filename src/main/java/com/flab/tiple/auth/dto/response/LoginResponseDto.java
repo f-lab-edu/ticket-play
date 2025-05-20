@@ -1,4 +1,4 @@
-package com.flab.tiple.global.auth.dto.response;
+package com.flab.tiple.auth.dto.response;
 
 import jakarta.validation.constraints.NotNull;
 import lombok.AccessLevel;

@@ -1,4 +1,4 @@
-package com.flab.tiple.sse.dto;
+package com.flab.tiple.global.infrastructure.notification.dto;
 
 import java.time.LocalDateTime;
 

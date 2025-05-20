@@ -76,7 +76,7 @@ public class SecurityConfig {
 		"/api/auth/login",
 		"/api/concerts",
 		"/api/concerts/**",
-		"/actuator/**"
+		"/actuator/**",
 	};
 
 	@Bean

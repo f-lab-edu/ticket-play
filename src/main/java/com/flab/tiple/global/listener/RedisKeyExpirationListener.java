@@ -1,4 +1,4 @@
-package com.flab.tiple.global.listner;
+package com.flab.tiple.global.listener;
 
 import org.springframework.data.redis.connection.Message;
 import org.springframework.data.redis.connection.MessageListener;

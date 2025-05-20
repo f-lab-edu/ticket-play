@@ -1,4 +1,4 @@
-package com.flab.tiple.global.auth.service;
+package com.flab.tiple.auth.service;
 
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -6,8 +6,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import com.flab.tiple.global.auth.dto.request.LoginRequestDto;
-import com.flab.tiple.global.auth.dto.response.LoginResponseDto;
+import com.flab.tiple.auth.dto.request.LoginRequestDto;
+import com.flab.tiple.auth.dto.response.LoginResponseDto;
 import com.flab.tiple.global.exception.ErrorCode;
 import com.flab.tiple.global.security.JwtTokenProvider;
 import com.flab.tiple.member.domain.Member;

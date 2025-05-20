@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -24,12 +25,17 @@ import com.flab.tiple.concert.repository.concertSeat.ConcertSeatRepository;
 import com.flab.tiple.global.exception.ErrorCode;
 import com.flab.tiple.global.message.TipleMessage;
 import com.flab.tiple.global.message.TipleRedisKey;
-import com.flab.tiple.sse.service.SseEmitterService;
-import com.flab.tiple.sse.dto.NotificationDto;
+import com.flab.tiple.global.infrastructure.notification.sse.SseEmitterService;
+import com.flab.tiple.global.infrastructure.notification.dto.NotificationDto;
 import com.flab.tiple.member.domain.Member;
 import com.flab.tiple.member.dto.response.MemberInfoDto;
 import com.flab.tiple.member.exception.MemberNotFoundException;
 import com.flab.tiple.member.repository.MemberRepository;
+import com.flab.tiple.ticket.reservation.application.event.reservation.ReservationApprovedEvent;
+import com.flab.tiple.ticket.reservation.application.event.reservation.ReservationCanceledEvent;
+import com.flab.tiple.ticket.reservation.application.event.reservation.ReservationCreatedEvent;
+import com.flab.tiple.ticket.reservation.application.event.reservation.ReservationTimeoutEvent;
+import com.flab.tiple.ticket.reservation.application.event.reservation.WaitingRegisteredEvent;
 import com.flab.tiple.ticket.reservation.domain.model.TicketReservation;
 import com.flab.tiple.ticket.reservation.domain.model.TicketReservationRedis;
 import com.flab.tiple.ticket.reservation.application.dto.request.TicketReservationRequestDto;
@@ -45,6 +51,7 @@ import com.flab.tiple.ticket.waiting.domain.TicketWaiting;
 import com.flab.tiple.ticket.waiting.domain.TicketWaitingRedis;
 import com.flab.tiple.ticket.waiting.dto.response.TicketWaitingResponseDto;
 import com.flab.tiple.ticket.waiting.enums.TicketWaitingStatus;
+import com.flab.tiple.ticket.waiting.exception.TicketWaitingNotFoundException;
 import com.flab.tiple.ticket.waiting.exception.TicketWaitingRegisterException;
 import com.flab.tiple.ticket.waiting.repository.TicketWaitingRedisRepository;
 import com.flab.tiple.ticket.waiting.repository.TicketWaitingRepository;
@@ -67,6 +74,10 @@ public class TicketReservationServiceImpl implements TicketReservationService {
 	private final SseEmitterService sseEmitterService;
 	private final RedisTemplate<String, Object> redisTemplate;
 	private final StringRedisTemplate stringRedisTemplate; // 추가
+
+	// 이벤트 발행을 위한 새로운 의존성 추가
+	private final ApplicationEventPublisher eventPublisher;
+
 	private final int REDIS_KEY_TTL = 600;
 
 	// 티켓 예약 요청
@@ -79,8 +90,17 @@ public class TicketReservationServiceImpl implements TicketReservationService {
 		try {
 			// 일반 예약 시도
 			TicketReservationInfoResponseDto reservation = tryReserveSeat(requestDto, memberId);
-			// Redis에 10분 타이머 설정
-			saveReservationToRedis(requestDto.getSeatId(), memberId, requestDto.getConcertId());
+
+			// 이벤트 발행 - 예약 정보 찾기
+			TicketReservation ticketReservation = ticketReservationRepository
+				.findById(reservation.getId())
+				.orElseThrow(() -> new TicketReservationNotFoundException(
+					ErrorCode.TICKET_RESERVATION_NOT_FOUND,
+					ErrorCode.TICKET_RESERVATION_NOT_FOUND.getDescription()
+				));
+
+			// 예약 생성 이벤트 발행
+			eventPublisher.publishEvent(ReservationCreatedEvent.from(ticketReservation));
 
 			return TicketReservationResponseDto.builder()
 				.data(reservation)
@@ -95,7 +115,6 @@ public class TicketReservationServiceImpl implements TicketReservationService {
 				.build();
 		}
 	}
-
 
 	@Transactional(propagation = Propagation.SUPPORTS)
 	public TicketReservationInfoResponseDto tryReserveSeat(
@@ -145,7 +164,7 @@ public class TicketReservationServiceImpl implements TicketReservationService {
 		Long concertId = info.getConcert().getId();
 		Long memberId = info.getMember().getId();
 
-		// step1 이미 대기 중인지 확인(waiting확인)
+		// 이미 대기 중인지 확인
 		Optional<TicketWaitingRedis> existingWaiting =
 			ticketWaitingRedisRepository.findByConcertIdAndMemberId(concertId, memberId);
 
@@ -153,10 +172,20 @@ public class TicketReservationServiceImpl implements TicketReservationService {
 			return buildWaitingResponse(info, existingWaiting.get().getWaitingNumber());
 		}
 
-		// Step2. 대기 번호 생성 및 Redis 저장
+		// 대기 번호 생성 및 Redis 저장
 		int waitingNumber = generateAndSaveWaitingNumber(info);
 
-		// Step3. 응답 생성
+		// 대기 등록 이벤트 발행
+		TicketWaitingRedis waitingRedis = ticketWaitingRedisRepository
+			.findByConcertIdAndMemberId(concertId, memberId)
+			.orElseThrow(() -> new TicketWaitingNotFoundException(
+				ErrorCode.TICKET_WAITING_NOT_FOUND,
+				ErrorCode.TICKET_WAITING_NOT_FOUND.getDescription()
+			));
+
+		eventPublisher.publishEvent(WaitingRegisteredEvent.from(waitingRedis));
+
+		// 응답 생성
 		return buildWaitingResponse(info, waitingNumber);
 	}
 
@@ -198,9 +227,9 @@ public class TicketReservationServiceImpl implements TicketReservationService {
 		TicketReservationServiceFindInfo info = findReservationInfo(reservationId, memberId);
 		// 2. 정보 검증
 		validateReservationApproval(info);
+
 		// Redis에서 타이머 정보 확인
 		String redisKey = info.getConcertSeat().getId() + ":" + memberId;
-
 		Optional<TicketReservationRedis> reservationRedis = ticketReservationRedisRepository.findById(redisKey);
 
 		if (reservationRedis.isEmpty()) {
@@ -213,28 +242,28 @@ public class TicketReservationServiceImpl implements TicketReservationService {
 		// 3. 정보 수정
 		TicketReservationInfoResponseDto result = processReservationApproval(info);
 
-		// Redis에서 타이머 정보 삭제
-		ticketReservationRedisRepository.deleteById(redisKey);
+		// 예약 승인 이벤트 발행
+		eventPublisher.publishEvent(ReservationApprovedEvent.from(info.getTicketReservation()));
 
 		return result;
 	}
 
 
+
+	// 예약 취소
 	@Transactional
 	@Override
-	public TicketReservationInfoResponseDto cancelReservation(
-		Long reservationId,
-		Long memberId
-	) {
+	public TicketReservationInfoResponseDto cancelReservation(Long reservationId, Long memberId) {
 		// 1. 정보 찾기
 		TicketReservationServiceFindInfo info = findReservationInfo(reservationId, memberId);
 		// 2. 정보 검증
 		validateReservationCancellation(info);
+
 		// 3. 정보 수정
 		TicketReservationInfoResponseDto result = processReservationCancellation(info);
 
-		// 취소 후 대기자 알림 처리
-		processNextWaitingUser(info.getConcert().getId(), info.getConcertSeat().getId());
+		// 예약 취소 이벤트 발행
+		eventPublisher.publishEvent(ReservationCanceledEvent.from(info.getTicketReservation()));
 
 		return result;
 	}
@@ -297,12 +326,15 @@ public class TicketReservationServiceImpl implements TicketReservationService {
 			markReservationAsTimeout(reservation);
 			releaseSeat(reservation.getSeat());
 			increaseRemainingSeat(reservation.getSeat().getConcert().getId());
-			processNextWaitingUser(reservation.getSeat().getConcert().getId(), reservation.getSeat().getId());
+
+			// 예약 타임아웃 이벤트 발행
+			eventPublisher.publishEvent(ReservationTimeoutEvent.from(reservation));
 
 		} catch (Exception e) {
 			log.error("예약 타임아웃 처리 중 오류 발생: {}", e.getMessage(), e);
 		}
 	}
+
 	private void markReservationAsTimeout(TicketReservation reservation) {
 		reservation.timeout(); // 상태 변경
 		ticketReservationRepository.save(reservation);

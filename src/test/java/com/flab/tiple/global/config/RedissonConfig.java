@@ -21,7 +21,7 @@ import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.data.redis.core.convert.RedisCustomConversions;
 import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 
-import com.flab.tiple.global.listner.RedisKeyExpirationListener;
+import com.flab.tiple.global.listener.RedisKeyExpirationListener;
 import com.flab.tiple.global.util.RedissionLockExecutor;
 import com.flab.tiple.ticket.reservation.domain.repository.TicketReservationRedisRepository;
 import com.flab.tiple.ticket.waiting.repository.TicketWaitingRedisRepository;

@@ -1,4 +1,4 @@
-package com.flab.tiple.global.auth.dto.request;
+package com.flab.tiple.auth.dto.request;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotNull;

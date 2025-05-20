@@ -1,13 +1,13 @@
-package com.flab.tiple.global.auth.controller;
+package com.flab.tiple.auth.controller;
 
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.flab.tiple.global.auth.dto.request.LoginRequestDto;
-import com.flab.tiple.global.auth.dto.response.LoginResponseDto;
-import com.flab.tiple.global.auth.service.AuthServiceImpl;
+import com.flab.tiple.auth.dto.response.LoginResponseDto;
+import com.flab.tiple.auth.service.AuthServiceImpl;
+import com.flab.tiple.auth.dto.request.LoginRequestDto;
 import com.flab.tiple.global.response.ApiResponse;
 
 import lombok.RequiredArgsConstructor;

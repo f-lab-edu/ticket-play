@@ -32,7 +32,7 @@ import org.springframework.test.web.servlet.ResultActions;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.flab.tiple.global.auth.aop.LoginCheckAspect;
+import com.flab.tiple.global.aop.LoginCheckAspect;
 import com.flab.tiple.global.config.MockBeanConfig;
 import com.flab.tiple.global.config.TestSecurityConfig;
 import com.flab.tiple.global.response.ApiResponse;
@@ -44,7 +44,6 @@ import com.flab.tiple.ticket.waiting.dto.response.TicketWaitingCancelResponseDto
 import com.flab.tiple.ticket.waiting.dto.response.TicketWaitingInfoResponseDto;
 import com.flab.tiple.ticket.waiting.enums.TicketWaitingStatus;
 import com.flab.tiple.ticket.waiting.facade.TicketWaitingFacade;
-import com.flab.tiple.ticket.waiting.service.TicketWaitingService;
 
 @WebMvcTest(
 	controllers = TicketWaitingController.class,

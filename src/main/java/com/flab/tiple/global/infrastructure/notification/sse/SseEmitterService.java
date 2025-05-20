@@ -1,4 +1,4 @@
-package com.flab.tiple.sse.service;
+package com.flab.tiple.global.infrastructure.notification.sse;
 
 import java.io.IOException;
 import java.util.Map;

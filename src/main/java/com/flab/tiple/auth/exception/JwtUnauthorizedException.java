@@ -1,4 +1,4 @@
-package com.flab.tiple.global.auth.exception;
+package com.flab.tiple.auth.exception;
 
 import com.flab.tiple.global.exception.ErrorCode;
 import com.flab.tiple.global.exception.TokenException;
