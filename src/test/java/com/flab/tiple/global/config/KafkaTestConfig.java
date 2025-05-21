@@ -3,17 +3,13 @@ package com.flab.tiple.global.config;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
-import org.springframework.kafka.config.KafkaListenerEndpointRegistry;
 import org.springframework.kafka.core.KafkaTemplate;
-import org.springframework.kafka.listener.MessageListenerContainer;
 import org.springframework.kafka.test.EmbeddedKafkaBroker;
 import org.springframework.kafka.test.context.EmbeddedKafka;
-import org.springframework.kafka.test.utils.ContainerTestUtils;
-import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 
-import com.flab.tiple.ticket.reservation.dto.message.TicketReservationMessage;
-import com.flab.tiple.ticket.reservation.dto.message.TicketReservationResultMessage;
+import com.flab.tiple.ticket.reservation.application.dto.message.TicketReservationMessage;
+import com.flab.tiple.ticket.reservation.application.dto.message.TicketReservationResultMessage;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -57,8 +53,8 @@ public class KafkaTestConfig {
 		configProps.put(ProducerConfig.KEY_SERIALIZER_CLASS_CONFIG, StringSerializer.class);
 		configProps.put(ProducerConfig.VALUE_SERIALIZER_CLASS_CONFIG, JsonSerializer.class);
 		configProps.put(JsonSerializer.TYPE_MAPPINGS,
-			"ticketRequest:com.flab.tiple.ticket.reservation.dto.message.TicketReservationMessage," +
-				"ticketResult:com.flab.tiple.ticket.reservation.dto.message.TicketReservationResultMessage");
+			"ticketRequest:com.flab.tiple.ticket.reservation.application.message.dto.TicketReservationMessage," +
+				"ticketResult:com.flab.tiple.ticket.reservation.application.message.dto.TicketReservationResultMessage");
 
 		return new DefaultKafkaProducerFactory<>(configProps);
 	}
@@ -79,9 +75,9 @@ public class KafkaTestConfig {
 		props.put(ErrorHandlingDeserializer.VALUE_DESERIALIZER_CLASS, JsonDeserializer.class);
 		props.put(JsonDeserializer.TRUSTED_PACKAGES, "com.flab.tiple.ticket.reservation.dto.message");
 		props.put(JsonDeserializer.TYPE_MAPPINGS,
-			"ticketRequest:com.flab.tiple.ticket.reservation.dto.message.TicketReservationMessage," +
-				"ticketResult:com.flab.tiple.ticket.reservation.dto.message.TicketReservationResultMessage");
-		props.put(JsonDeserializer.VALUE_DEFAULT_TYPE, "com.flab.tiple.ticket.reservation.dto.message.TicketReservationMessage");
+			"ticketRequest:com.flab.tiple.ticket.reservation.application.message.dto.TicketReservationMessage," +
+				"ticketResult:com.flab.tiple.ticket.reservation.application.message.dto.TicketReservationResultMessage");
+		props.put(JsonDeserializer.VALUE_DEFAULT_TYPE, "com.flab.tiple.ticket.reservation.application.message.dto.TicketReservationMessage");
 
 		return new DefaultKafkaConsumerFactory<>(props);
 	}
@@ -104,7 +100,7 @@ public class KafkaTestConfig {
 		props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, ErrorHandlingDeserializer.class);
 		props.put(ErrorHandlingDeserializer.VALUE_DESERIALIZER_CLASS, JsonDeserializer.class);
 		props.put(JsonDeserializer.TRUSTED_PACKAGES, "com.flab.tiple.ticket.reservation.dto.message");
-		props.put(JsonDeserializer.VALUE_DEFAULT_TYPE, "com.flab.tiple.ticket.reservation.dto.message.TicketReservationMessage");
+		props.put(JsonDeserializer.VALUE_DEFAULT_TYPE, "com.flab.tiple.ticket.reservation.application.message.dto.TicketReservationMessage");
 
 		return new DefaultKafkaConsumerFactory<>(props);
 	}
@@ -126,7 +122,7 @@ public class KafkaTestConfig {
 		props.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, ErrorHandlingDeserializer.class);
 		props.put(ErrorHandlingDeserializer.VALUE_DESERIALIZER_CLASS, JsonDeserializer.class);
 		props.put(JsonDeserializer.TRUSTED_PACKAGES, "com.flab.tiple.ticket.reservation.dto.message");
-		props.put(JsonDeserializer.VALUE_DEFAULT_TYPE, "com.flab.tiple.ticket.reservation.dto.message.TicketReservationResultMessage");
+		props.put(JsonDeserializer.VALUE_DEFAULT_TYPE, "com.flab.tiple.ticket.reservation.application.message.dto.TicketReservationResultMessage");
 
 		return new DefaultKafkaConsumerFactory<>(props);
 	}

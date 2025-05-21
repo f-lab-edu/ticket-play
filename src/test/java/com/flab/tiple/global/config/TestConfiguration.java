@@ -4,7 +4,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
 
-import com.flab.tiple.ticket.reservation.initializer.StatusTransitionJsonInitializer;
+import com.flab.tiple.ticket.reservation.infrastructure.initializer.StatusTransitionJsonInitializer;
 
 @Configuration
 @Profile("test")

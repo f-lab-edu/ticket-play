@@ -19,8 +19,9 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
-import com.flab.tiple.global.auth.dto.request.LoginRequestDto;
-import com.flab.tiple.global.auth.dto.response.LoginResponseDto;
+import com.flab.tiple.auth.dto.request.LoginRequestDto;
+import com.flab.tiple.auth.dto.response.LoginResponseDto;
+import com.flab.tiple.auth.service.AuthServiceImpl;
 import com.flab.tiple.global.security.JwtTokenProvider;
 import com.flab.tiple.member.domain.Member;
 import com.flab.tiple.member.enums.RoleEnum;
