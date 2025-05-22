@@ -5,8 +5,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
-import com.flab.tiple.global.aop.LoginCheck;
-import com.flab.tiple.global.aop.LoginCheckAspect;
+import com.flab.tiple.global.aop.login.LoginCheck;
+import com.flab.tiple.global.aop.login.LoginCheckAspect;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;

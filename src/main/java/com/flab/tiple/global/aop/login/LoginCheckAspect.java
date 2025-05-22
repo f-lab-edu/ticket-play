@@ -1,4 +1,4 @@
-package com.flab.tiple.global.aop;
+package com.flab.tiple.global.aop.login;
 
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;

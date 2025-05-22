@@ -1,4 +1,4 @@
-package com.flab.tiple.global.aop;
+package com.flab.tiple.global.aop.login;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
