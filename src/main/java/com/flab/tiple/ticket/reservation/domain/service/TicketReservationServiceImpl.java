@@ -75,13 +75,49 @@ public class TicketReservationServiceImpl implements TicketReservationService {
 	private final RedisTemplate<String, Object> redisTemplate;
 	private final StringRedisTemplate stringRedisTemplate; // 추가
 
+	/**
+	 * ApplicationEventPublisher란?
+	 *
+	 * 1. 개념:
+	 *    - Spring Framework의 이벤트 발행 메커니즘
+	 *    - Observer 패턴의 Spring 구현체
+	 *
+	 * 2. 장점:
+	 *    ─ 낮은 결합도: 이벤트 발행자가 구독자를 직접 알 필요 없음
+	 *    ─ 확장성: 새로운 이벤트 리스너 쉽게 추가 가능
+	 *    ─ 단일 책임: 각 컴포넌트가 자신의 역할에만 집중
+	 *    ─ 테스트 용이성: 이벤트 단위로 독립적 테스트 가능
+	 *
+	 * 3. Spring Context에서의 역할:
+	 *    - ApplicationContext가 ApplicationEventPublisher를 구현
+	 *    - 모든 Spring Bean에서 이벤트 발행 가능
+	 *    - Spring Boot에서 자동으로 설정됨
+	 *
+	 *    Spring ApplicationEventPublisher 내부 동작 순서:
+	 *    1단계: 이벤트 발행(ApplicationContext.publishEvent() 호출 및 실행)
+	 *    2단계: 리스너 검색(ApplicationEventMulticaster.multicastEvent() 호출 -> Spring Context에서 모든 @EventListener 메소드 검색 )
+	 *    3단계: 리스너 실행(매칭 리스너가  @Async 없음: 동기 실행 -> 발행자와 같은 스레드 / @Async 있음: 비동기 실행 -> 별도 스레드에서 실행 )
+	 */
 	// 이벤트 발행을 위한 새로운 의존성 추가
 	private final ApplicationEventPublisher eventPublisher;
 
 	private final int REDIS_KEY_TTL = 600;
 
-	// 티켓 예약 요청
-	@Transactional
+	/**
+	 * 예약 요청 처리 흐름
+	 *   1. tryReserveSeat() 시도
+	 *   ├─ 좌석 정보 조회
+	 *   ├─ 예약 가능성 검증
+	 *   └─ DB에 PENDING 예약 생성
+	 * ─ 성공 시:
+	 *   ├─ ReservationCreated
+	 *   │  Event 발행
+	 *   └─ SUCCESS 응답
+	 * ─ 실패 시:
+	 *   ├─ ConcertSeatReservationException 발생
+	 *   └─ 대기 등록 로직으로 processWaitingRegistration 이동
+	 */
+	// 티켓 예약 요청예
 	@Override
 	public TicketReservationResponseDto<?> requestReservation(
 		TicketReservationRequestDto requestDto,
@@ -129,8 +165,21 @@ public class TicketReservationServiceImpl implements TicketReservationService {
 		return processSeatReservation(info);
 	}
 
-
-
+	/**
+	 * 대기 등록 처리
+	 *  ─ 좌석 정보 재조회
+	 *  ─ 대기 등록 가능성 검증
+	 *
+	 *  registerWaitingToRedis():
+	 *  ─ 기존 대기 여부 확인
+	 *  ─ 대기번호 생성 및 저장
+	 *   ─ Redis Counter 사용
+	 *   ─ TicketWaitingRedis
+	 *    │  객체 생성 및 저장
+	 *    └─ 번호 반환
+	 *   ─ WaitingRegistered
+	 *     Event 발행 -> WAITING 응답
+	 */
 	@Transactional
 	public TicketWaitingResponseDto processWaitingRegistration(
 		TicketReservationRequestDto requestDto,
@@ -316,6 +365,18 @@ public class TicketReservationServiceImpl implements TicketReservationService {
 		return ticketReservations.stream().map(this::TicketReservationToDto).toList();
 	}
 
+	/**
+	 * 타임아웃 처리
+	 *  ─ PENDING 예약 조회
+	 *   ─ 예약 상태 → TIMEOUT
+	 *   ─ 좌석 상태 → AVAILABLE
+	 *   ─ 콘서트 잔여석 증가 -> DB 변경사항 저장 -> ReservationTimeout ->Event 발행            │
+	 *
+	 * + @Scheduled 배치 처리:
+	 *  ├─ 10분 경과 PENDING
+	 *  │  예약들 일괄 조회
+	 *  └─ 각각 타임아웃 처리
+	 */
 	@Transactional
 	@Override
 	public void handleReservationTimeout(Long seatId, Long memberId) {

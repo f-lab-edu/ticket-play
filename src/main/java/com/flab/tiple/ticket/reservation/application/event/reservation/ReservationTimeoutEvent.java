@@ -7,19 +7,11 @@ import lombok.Builder;
 import lombok.Getter;
 
 @Getter
-public class ReservationTimeoutEvent extends AbstractDomainEvent {
-	private final Long reservationId;
-	private final Long seatId;
-	private final Long memberId;
-	private final Long concertId;
+public class ReservationTimeoutEvent extends ReservationDomainEvent {
 
 	@Builder
 	public ReservationTimeoutEvent(Long reservationId, Long seatId, Long memberId, Long concertId) {
-		super();
-		this.reservationId = reservationId;
-		this.seatId = seatId;
-		this.memberId = memberId;
-		this.concertId = concertId;
+		super(reservationId, seatId, memberId, concertId);
 	}
 
 	public static ReservationTimeoutEvent from(TicketReservation reservation) {

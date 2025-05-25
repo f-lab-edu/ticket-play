@@ -3,6 +3,27 @@
 spring:
   profiles:
     active: ${SPRING_PROFILES_ACTIVE:local}
+  retryable:
+    maxAttempts: 3
+    backoff:
+      delay: 1000
+      multiplier: 2
+  task:
+    timeout:
+      executor:
+        core_pool_size: 5
+        max_pool_size: 5
+        queue_capacity: 200
+        keep_alive_seconds: 60
+        thread_name_prefix: timeout-
+        await_termination_seconds: 30
+    event:
+      executor:
+        core_pool_size: 5
+        max_pool_size: 5
+        queue_capacity: 200
+        thread_name_prefix: event-
+
   jpa:
     properties:
       hibernate:
