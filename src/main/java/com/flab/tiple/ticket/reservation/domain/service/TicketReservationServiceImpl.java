@@ -210,7 +210,7 @@ public class TicketReservationServiceImpl implements TicketReservationService {
 			.concertId(concertId)
 			.memberId(memberId)
 			.waitingNumber(waitingNumber.intValue())
-			.status(TicketWaitingStatus.WAITING.toString())
+			.status(TicketWaitingStatus.WAITING)
 			.build();
 
 		ticketWaitingRedisRepository.save(waitingRedis);

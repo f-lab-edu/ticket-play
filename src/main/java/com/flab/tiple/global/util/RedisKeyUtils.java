@@ -14,6 +14,10 @@ public class RedisKeyUtils {
 	private static final String WAITING_KEY_PREFIX = TipleRedisKey.TICKET_RESERVATION_KEY.getKey();
 	private static final String CACHE_KEY_PREFIX = "cache:member:waiting:";
 	private static final String LOCK_KEY_PREFIX = "lock:waiting:";
+
+	// Sorted Set 관련 키 프리픽스 추가
+	private static final String MEMBER_WAITING_SORTED_SET_PREFIX = "member:waiting:sorted:";
+
 	private static final String KEY_SEPARATOR = ":";
 
 	/**
@@ -26,12 +30,39 @@ public class RedisKeyUtils {
 	}
 
 	/**
+	 * 회원별 대기 목록 Sorted Set 키 생성
+	 * @param memberId 회원 ID
+	 * @return Sorted Set 키
+	 */
+	public String generateMemberWaitingSortedSetKey(Long memberId) {
+		return MEMBER_WAITING_SORTED_SET_PREFIX + memberId;
+	}
+
+	/**
 	 * 분산 락 키 생성
 	 * @param resourceId 리소스 ID
 	 * @return 락 키
 	 */
 	public String generateLockKey(String resourceId) {
 		return LOCK_KEY_PREFIX + resourceId;
+	}
+
+	/**
+	 * 대기 정보 Redis 키 생성
+	 * @param waitingId 대기 ID
+	 * @return Redis 키
+	 */
+	public String generateWaitingKey(Long waitingId) {
+		return WAITING_KEY_PREFIX + waitingId;
+	}
+
+	/**
+	 * 회원 패턴 키 생성 (KEYS 명령용 - 주의: 프로덕션에서는 SCAN 사용 권장)
+	 * @param memberId 회원 ID
+	 * @return 패턴 키
+	 */
+	public String generateMemberWaitingPattern(Long memberId) {
+		return WAITING_KEY_PREFIX + "*:" + memberId;
 	}
 
 	/**
