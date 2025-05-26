@@ -1,23 +1,20 @@
-package com.flab.tiple.global.config;
+package com.flab.tiple.config;
 
 import org.redisson.Redisson;
 import org.redisson.api.RedissonClient;
 import org.redisson.config.Config;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Profile;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.core.StringRedisTemplate;
-import org.springframework.data.redis.listener.PatternTopic;
-import org.springframework.data.redis.listener.RedisMessageListenerContainer;
 import org.springframework.data.redis.serializer.Jackson2JsonRedisSerializer;
 import org.springframework.data.redis.serializer.StringRedisSerializer;
 
-import com.flab.tiple.global.listener.RedisKeyExpirationListener;
 
 @Configuration
 @Profile("!test") // 테스트 프로파일이 아닐 때만 이 설정 사용
@@ -102,15 +99,15 @@ public class RedissonConfig {
 	 *
 	 * 🔔 이 설정은 예를 들어, 대기열 TTL이 끝났을 때 알림을 보내거나 자동 취소 등의 후처리를 가능하게 해줍니다.
 	 */
-	@Bean
-	public RedisMessageListenerContainer redisMessageListenerContainer(
-		RedisConnectionFactory connectionFactory,
-		RedisKeyExpirationListener keyExpirationListener) {
-
-		RedisMessageListenerContainer container = new RedisMessageListenerContainer();
-		container.setConnectionFactory(connectionFactory);
-		container.addMessageListener(keyExpirationListener, new PatternTopic("__keyevent@*__:expired"));
-
-		return container;
-	}
+	// @Bean
+	// public RedisMessageListenerContainer redisMessageListenerContainer(
+	// 	RedisConnectionFactory connectionFactory,
+	// 	RedisKeyExpirationListener keyExpirationListener) {
+	//
+	// 	RedisMessageListenerContainer container = new RedisMessageListenerContainer();
+	// 	container.setConnectionFactory(connectionFactory);
+	// 	container.addMessageListener(keyExpirationListener, new PatternTopic("__keyevent@*__:expired"));
+	//
+	// 	return container;
+	// }
 }

@@ -1,0 +1,142 @@
+plugins {
+    id 'java'
+    id 'java-library'
+    id 'jacoco'
+    id 'org.springframework.boot' version '3.4.3'
+    id 'io.spring.dependency-management' version '1.1.7'
+    id 'org.asciidoctor.jvm.convert' version '3.3.2' // rest-docs설정
+}
+
+group = 'com.flab.tiple'
+version = '0.0.1-SNAPSHOT'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+configurations {
+    compileOnly {
+        extendsFrom annotationProcessor
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+// Core 모듈: 공통 도메인, 엔티티, 유틸리티, 인프라 설정
+dependencies {
+    // === 다른 모듈들이 공통으로 사용할 의존성들 (API로 노출) ===
+
+    // Spring Boot 기본 - 모든 모듈에서 사용하는 기본 기능
+    api 'org.springframework.boot:spring-boot-starter'
+    api 'org.springframework.boot:spring-boot-starter-web'
+    api 'org.springframework.boot:spring-boot-starter-data-jpa'
+    api 'org.springframework.boot:spring-boot-starter-validation'
+
+    // 데이터베이스 - 모든 모듈에서 JPA 엔티티, Repository 사용
+    api 'mysql:mysql-connector-java:8.0.32'
+    testRuntimeOnly 'com.h2database:h2'  // 테스트용이므로 implementation도 가능
+
+    // Redis - 캐싱, 세션 등을 다른 모듈에서도 사용
+    api 'org.redisson:redisson-spring-boot-starter:3.27.0'
+    api 'org.springframework.boot:spring-boot-starter-data-redis'
+
+    // AOP - @Transactional, 커스텀 AOP를 다른 모듈에서 사용
+    api 'org.springframework.boot:spring-boot-starter-aop'
+
+    // Retry - 다른 모듈에서 @Retryable 사용 가능
+    api 'org.springframework.retry:spring-retry'
+
+    // QueryDSL 의존성
+    api 'com.querydsl:querydsl-jpa:5.0.0:jakarta'
+    annotationProcessor 'com.querydsl:querydsl-apt:5.0.0:jakarta'
+    annotationProcessor 'jakarta.annotation:jakarta.annotation-api'
+    annotationProcessor 'jakarta.persistence:jakarta.persistence-api'
+
+
+    // 스프링 swagger
+    implementation 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0'
+
+    // 모니터링 - 인프라 설정만 core에서 담당, API 모듈에서 최종 구성
+    implementation 'org.springframework.boot:spring-boot-starter-actuator'
+    implementation 'io.micrometer:micrometer-registry-prometheus'
+    implementation 'io.micrometer:micrometer-tracing-bridge-otel'
+    implementation 'io.opentelemetry:opentelemetry-exporter-zipkin'
+
+    // Kafka - 이벤트 발행/구독 인프라 코드만 core에서 관리
+    implementation 'org.springframework.kafka:spring-kafka'
+    testImplementation 'org.springframework.kafka:spring-kafka-test'
+
+    compileOnly 'org.projectlombok:lombok'
+    annotationProcessor 'org.projectlombok:lombok'
+}
+
+// QueryDSL 설정
+def querydslDir = "src/main/generated/querydsl"
+
+sourceSets {
+    main {
+        java {
+            srcDirs += [querydslDir]
+        }
+    }
+    test {
+        java {
+            srcDirs = ['src/test/java']
+        }
+    }
+}
+
+
+
+// QueryDSL 생성된 소스 디렉토리 설정
+tasks.named('compileJava') {
+    options.annotationProcessorGeneratedSourcesDirectory = file(querydslDir)
+}
+
+// 클린 시 QueryDSL 생성 파일도 삭제
+clean {
+    doFirst {
+        delete querydslDir
+        delete "${buildDir}"
+        delete file('out')  // IDE가 생성하는 출력 디렉토리도 정리
+    }
+}
+
+
+// 테스트 커버리지 제외 대상 - Core 모듈 특화
+jacocoTestCoverageVerification {
+    violationRules {
+        rule {
+            element = 'CLASS'
+
+            limit {
+                counter = 'BRANCH'
+                value = 'COVEREDRATIO'
+                minimum = 0.80
+            }
+
+            limit {
+                counter = 'LINE'
+                value = 'COVEREDRATIO'
+                minimum = 0.80
+            }
+
+            excludes = [
+                    // 루트의 공통 제외 + Core 모듈 특화 제외
+                    '**.*Application',
+                    '**.config.*',
+                    '**.configuration.*',
+                    '**.dto.*',
+                    '**.entity.*',
+                    '**.domain.*',
+                    '**.Q*',
+                    '**.exception.*',
+                    '**.event.*'
+            ]
+        }
+    }
+}

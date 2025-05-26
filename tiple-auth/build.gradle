@@ -1,0 +1,75 @@
+plugins {
+    id 'java'
+    id 'java-library'
+    id 'jacoco'
+    id 'org.springframework.boot' version '3.4.3'
+    id 'io.spring.dependency-management' version '1.1.7'
+    id 'org.asciidoctor.jvm.convert' version '3.3.2' // rest-docs설정
+}
+
+group = 'com.flab.tiple'
+version = '0.0.1-SNAPSHOT'
+
+java {
+    toolchain {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
+configurations {
+    compileOnly {
+        extendsFrom annotationProcessor
+    }
+}
+
+repositories {
+    mavenCentral()
+}
+
+// Auth 모듈: 인증/인가 관련 기능
+dependencies {
+    // Core 모듈 의존
+    implementation project(':tiple-core')
+
+    // === API로 노출할 의존성들 ===
+    // 다른 모듈에서 @PreAuthorize, @Secured 등 Security 어노테이션 사용 가능
+    api 'org.springframework.boot:spring-boot-starter-security'
+
+    // JWT API - 다른 모듈에서 JWT 관련 인터페이스 사용 가능
+    api 'io.jsonwebtoken:jjwt-api:0.11.5'
+    runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.11.5'
+    runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.11.5'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+
+    // Security 테스트
+    testImplementation 'org.springframework.security:spring-security-test'
+}
+
+// 테스트 커버리지 제외 대상 - Auth 모듈 특화
+jacocoTestCoverageVerification {
+    violationRules {
+        rule {
+            element = 'CLASS'
+
+            limit {
+                counter = 'BRANCH'
+                value = 'COVEREDRATIO'
+                minimum = 0.80
+            }
+
+            limit {
+                counter = 'LINE'
+                value = 'COVEREDRATIO'
+                minimum = 0.80
+            }
+
+            excludes = [
+                    '**.config.*',
+                    '**.dto.*',
+                    '**.exception.*'
+            ]
+        }
+    }
+}
