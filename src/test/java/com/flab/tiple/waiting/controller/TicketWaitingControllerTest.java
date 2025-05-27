@@ -32,7 +32,7 @@ import org.springframework.test.web.servlet.ResultActions;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.flab.tiple.global.aop.LoginCheckAspect;
+import com.flab.tiple.global.aop.login.LoginCheckAspect;
 import com.flab.tiple.global.config.MockBeanConfig;
 import com.flab.tiple.global.config.TestSecurityConfig;
 import com.flab.tiple.global.response.ApiResponse;

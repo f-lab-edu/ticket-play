@@ -8,8 +8,8 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.flab.tiple.global.aop.LoginCheck;
-import com.flab.tiple.global.aop.LoginCheckAspect;
+import com.flab.tiple.global.aop.login.LoginCheck;
+import com.flab.tiple.global.aop.login.LoginCheckAspect;
 import com.flab.tiple.global.response.ApiResponse;
 import com.flab.tiple.ticket.waiting.dto.response.TicketWaitingCancelResponseDto;
 import com.flab.tiple.ticket.waiting.dto.response.TicketWaitingInfoResponseDto;

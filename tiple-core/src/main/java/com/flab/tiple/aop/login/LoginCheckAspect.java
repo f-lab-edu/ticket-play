@@ -1,4 +1,4 @@
-package com.flab.tiple.global.aop;
+package com.flab.tiple.aop.login;
 
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
@@ -9,10 +9,10 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
-import com.flab.tiple.auth.exception.JwtUnauthorizedException;
-import com.flab.tiple.global.exception.ErrorCode;
-import com.flab.tiple.global.security.JwtTokenProvider;
-import com.flab.tiple.global.util.JwtTokenUtil;
+import com.flab.tiple.exception.ErrorCode;
+import com.flab.tiple.exception.JwtUnauthorizedException;
+import com.flab.tiple.security.JwtTokenProvider;
+import com.flab.tiple.util.JwtTokenUtil;
 
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.AllArgsConstructor;

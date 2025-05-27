@@ -31,6 +31,7 @@ public enum ErrorCode {
     TICKET_WAITING_NOT_FOUND("티켓팅 웨이팅을 찾지 못했습니다.",400),
     TICKET_WAITING_INVALID_WAITING_STATUS("티켓 웨이팅 상태가 잘못되었습니다",400),
     TICKET_WAITING_NOT_CANCELABLE("티켓 취소가 불가합니다.",400),
+    TICKET_WAITING_CONCURRENT_ACCESS("티켓 취소가 불가합니다",400),
 
     // 인증관련에러
     UNAUTHORIZED("인증실패", 401),
