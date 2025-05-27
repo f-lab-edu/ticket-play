@@ -4,6 +4,10 @@ import java.time.LocalDateTime;
 
 import org.springframework.data.redis.core.RedisHash;
 
+import com.flab.tiple.global.exception.ErrorCode;
+import com.flab.tiple.ticket.waiting.enums.TicketWaitingStatus;
+import com.flab.tiple.ticket.waiting.exception.TicketWaitingNotCancelableException;
+
 import jakarta.persistence.Id;
 import lombok.Builder;
 import lombok.Getter;
@@ -16,12 +20,12 @@ public class TicketWaitingRedis {
 	private Long concertId;
 	private Long memberId;
 	private Integer waitingNumber;
-	private String status;
+	private TicketWaitingStatus status;
 	private LocalDateTime createdAt;
 
 	@Builder
 	public TicketWaitingRedis(Long concertId, Long memberId, Integer waitingNumber,
-		String status) {
+		TicketWaitingStatus status) {
 		this.id = concertId + ":" + memberId;
 		this.concertId = concertId;
 		this.memberId = memberId;
@@ -30,7 +34,16 @@ public class TicketWaitingRedis {
 		this.createdAt = LocalDateTime.now();
 	}
 
-	public void changeStatus(String status) {
+	public static void validateCancel(TicketWaitingRedis ticketWaiting){
+		if (ticketWaiting.getStatus().equals(TicketWaitingStatus.WAITING)) {
+			throw new TicketWaitingNotCancelableException(
+				ErrorCode.TICKET_WAITING_NOT_CANCELABLE,
+				ErrorCode.TICKET_WAITING_NOT_CANCELABLE.getDescription()
+			);
+		}
+	}
+
+	public void changeStatus(TicketWaitingStatus status) {
 		this.status = status;
 	}
 }
