@@ -5,6 +5,8 @@ import lombok.Getter;
 
 @Getter
 public enum ErrorCode {
+    AUTH_INVALID_PASSWORD("사용자 정보가 맞지 않습니다.",400),
+
     MEMBER_DUPLICATED("이 유저는 이미 가입된 멤버입니다", 400),
     MEMBER_NOT_FOUND("유저를 찾을 수 없습니다", 400),
     MEMBER_NOT_MATCH("유저정보가 일치하지 않습니다",400),
