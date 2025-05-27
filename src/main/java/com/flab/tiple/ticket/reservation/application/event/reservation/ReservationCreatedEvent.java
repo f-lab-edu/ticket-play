@@ -8,20 +8,12 @@ import lombok.Builder;
 import lombok.Getter;
 
 @Getter
-public class ReservationCreatedEvent extends AbstractDomainEvent {
-	private final Long reservationId;
-	private final Long seatId;
-	private final Long memberId;
-	private final Long concertId;
+public class ReservationCreatedEvent extends ReservationDomainEvent {
 	private final TicketReservationStatus status;
 
 	@Builder
 	public ReservationCreatedEvent(Long reservationId, Long seatId, Long memberId, Long concertId, TicketReservationStatus status) {
-		super();
-		this.reservationId = reservationId;
-		this.seatId = seatId;
-		this.memberId = memberId;
-		this.concertId = concertId;
+		super(reservationId, seatId, memberId, concertId);
 		this.status = status;
 	}
 
