@@ -1,14 +1,8 @@
 rootProject.name = 'ticket-play'
 
-include 'tiple-auth'
-include 'tiple-concert'
-include 'tiple-core'
-include 'tiple-member'
-include 'tiple-sse'
-include 'tiple-ticket'
+include 'tiple-concert', 'tiple-core', 'tiple-member', 'tiple-sse', 'tiple-ticket'
 
 project(':tiple-core').projectDir = file('tiple-core')
-project(':tiple-auth').projectDir = file('tiple-auth')
 project(':tiple-concert').projectDir = file('tiple-concert')
 project(':tiple-member').projectDir = file('tiple-member')
 project(':tiple-sse').projectDir = file('tiple-sse')

@@ -1,5 +1,7 @@
 plugins {
 	id 'java'
+	id 'java-library'
+	id 'jacoco'
 	id 'org.springframework.boot' version '3.4.3'
 	id 'io.spring.dependency-management' version '1.1.7'
 	id 'org.asciidoctor.jvm.convert' version '3.3.2' // rest-docs설정
@@ -15,6 +17,7 @@ java {
 }
 
 configurations {
+	asciidoctorExtensions
 	compileOnly {
 		extendsFrom annotationProcessor
 	}
@@ -24,14 +27,129 @@ repositories {
 	mavenCentral()
 }
 
+// Core 모듈: 공통 도메인, 엔티티, 유틸리티, 인프라 설정
 dependencies {
-	implementation 'org.springframework.boot:spring-boot-starter-web'
+	implementation project(':tiple-core')
+
+
+// JWT API - 다른 모듈에서 JWT 관련 인터페이스 사용 가능
+	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.11.5'
+	runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.11.5'
+
+// 데이터베이스 - 모든 모듈에서 JPA 엔티티, Repository 사용
+	testRuntimeOnly 'com.h2database:h2'  // 테스트용이므로 implementation도 가능
+
+
+// QueryDSL
+	annotationProcessor 'com.querydsl:querydsl-apt:5.0.0:jakarta'
+	annotationProcessor 'jakarta.annotation:jakarta.annotation-api'
+	annotationProcessor 'jakarta.persistence:jakarta.persistence-api'
+
 	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'
+	testCompileOnly 'org.projectlombok:lombok'
+	testAnnotationProcessor 'org.projectlombok:lombok'
+
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+	testImplementation 'org.springframework.security:spring-security-test'
+//rest-docs
+	asciidoctorExtensions 'org.springframework.restdocs:spring-restdocs-asciidoctor'
+	testImplementation 'org.springframework.restdocs:spring-restdocs-mockmvc'
 }
 
-tasks.named('test') {
-	useJUnitPlatform()
+def snippetsDir = file('build/generated-snippets')
+def querydslDir = "src/main/generated/querydsl"
+
+sourceSets {
+	main {
+		java {
+			srcDirs += [querydslDir]
+		}
+	}
+	test {
+		java {
+			srcDirs = ['src/test/java']
+		}
+	}
+}
+
+// asciidoctor 설정(Spring REST Docs 관련 설정)
+asciidoctor {
+	dependsOn test //테스트 실행 후에 실행됨. ->Spring REST Docs의 문서 조각이 테스트 실행 후 생성되기 때문
+	configurations 'asciidoctorExtensions'
+	inputs.dir snippetsDir //build/generated-snippets 디렉토리를 문서 입력값으로 사용
+
+	//문서에 포함할 .adoc 파일 지정 -> index.adoc만 포함.
+	sources{
+		include("**/index.adoc")
+	}
+
+	baseDirFollowsSourceFile()
+
+	// 문서 내부에서 사용할 속성 정의
+	attributes 'snippets': snippetsDir,
+			'operation-curl-request-title': 'Example request',
+			'operation-http-response-title': 'Example response'
+}
+
+// REST Docs 폴더 초기화
+asciidoctor.doFirst {
+	//REST Docs를 다시 만들기 전에 기존 static/docs 폴더 삭제.
+	delete file('src/main/resources/static/docs')
+}
+// copyDocument (REST Docs 결과 복사)
+task copyDocument(type: Copy) {
+	dependsOn asciidoctor //asciidoctor 작업이 끝난 후 실행됨.
+	from file("build/docs/asciidoc") // Asciidoctor가 생성한 HTML 문서를 build/docs/asciidoc에서 가져옴.
+	into file("src/main/resources/static/docs") //Spring Boot 정적 리소스 디렉토리 (static/docs)로 복사.
+}
+
+// QueryDSL 생성된 소스 디렉토리 설정
+tasks.named('compileJava') {
+	options.annotationProcessorGeneratedSourcesDirectory = file(querydslDir)
+}
+
+// 클린 시 QueryDSL 생성 파일도 삭제
+clean {
+	doFirst {
+		delete querydslDir
+		delete "${buildDir}"
+		delete file('out')  // IDE가 생성하는 출력 디렉토리도 정리
+	}
+}
+
+
+// 테스트 커버리지 제외 대상 - Core 모듈 특화
+jacocoTestCoverageVerification {
+	violationRules {
+		rule {
+			element = 'CLASS'
+
+			limit {
+				counter = 'BRANCH'
+				value = 'COVEREDRATIO'
+				minimum = 0.80
+			}
+
+			limit {
+				counter = 'LINE'
+				value = 'COVEREDRATIO'
+				minimum = 0.80
+			}
+
+			excludes = [
+					// 루트의 공통 제외 + Core 모듈 특화 제외
+					'**.*Application',
+					'**.config.*',
+					'**.configuration.*',
+					'**.dto.*',
+					'**.entity.*',
+					'**.domain.*',
+					'**.Q*',
+					'**.exception.*',
+					'**.event.*'
+			]
+		}
+	}
 }

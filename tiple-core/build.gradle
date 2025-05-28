@@ -17,6 +17,7 @@ java {
 }
 
 configurations {
+    asciidoctorExtensions
     compileOnly {
         extendsFrom annotationProcessor
     }
@@ -28,58 +29,67 @@ repositories {
 
 // Core 모듈: 공통 도메인, 엔티티, 유틸리티, 인프라 설정
 dependencies {
-    // === 다른 모듈들이 공통으로 사용할 의존성들 (API로 노출) ===
 
-    // Spring Boot 기본 - 모든 모듈에서 사용하는 기본 기능
     api 'org.springframework.boot:spring-boot-starter'
     api 'org.springframework.boot:spring-boot-starter-web'
     api 'org.springframework.boot:spring-boot-starter-data-jpa'
     api 'org.springframework.boot:spring-boot-starter-validation'
     api 'org.springframework.boot:spring-boot-starter-security'
 
-    // JWT API - 다른 모듈에서 JWT 관련 인터페이스 사용 가능
+// JWT API - 다른 모듈에서 JWT 관련 인터페이스 사용 가능
     api 'io.jsonwebtoken:jjwt-api:0.11.5'
     runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.11.5'
     runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.11.5'
 
-    // 데이터베이스 - 모든 모듈에서 JPA 엔티티, Repository 사용
+// 데이터베이스 - 모든 모듈에서 JPA 엔티티, Repository 사용
     api 'mysql:mysql-connector-java:8.0.32'
     testRuntimeOnly 'com.h2database:h2'  // 테스트용이므로 implementation도 가능
 
-    // Redis - 캐싱, 세션 등을 다른 모듈에서도 사용
+// Redis - 캐싱, 세션 등을 다른 모듈에서도 사용
     api 'org.redisson:redisson-spring-boot-starter:3.27.0'
     api 'org.springframework.boot:spring-boot-starter-data-redis'
 
-    // AOP - @Transactional, 커스텀 AOP를 다른 모듈에서 사용
+// AOP - @Transactional, 커스텀 AOP를 다른 모듈에서 사용
     api 'org.springframework.boot:spring-boot-starter-aop'
 
-    // Retry - 다른 모듈에서 @Retryable 사용 가능
+// Retry - 다른 모듈에서 @Retryable 사용 가능
     api 'org.springframework.retry:spring-retry'
 
-    // QueryDSL 의존성
+// QueryDSL 의존성
     api 'com.querydsl:querydsl-jpa:5.0.0:jakarta'
     annotationProcessor 'com.querydsl:querydsl-apt:5.0.0:jakarta'
     annotationProcessor 'jakarta.annotation:jakarta.annotation-api'
     annotationProcessor 'jakarta.persistence:jakarta.persistence-api'
 
-    api 'org.springframework.boot:spring-boot-starter-security'
-    // 스프링 swagger
+// 스프링 swagger
     api 'org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0'
+// SpringDoc과 호환되는 Spring Web 버전으로 명시
+    api 'org.springframework:spring-web:6.1.5'
+    api 'org.springframework:spring-webmvc:6.1.5'
 
-    // 모니터링 - 인프라 설정만 core에서 담당, API 모듈에서 최종 구성
+// 모니터링 - 인프라 설정만 core에서 담당, API 모듈에서 최종 구성
     api 'org.springframework.boot:spring-boot-starter-actuator'
     api 'io.micrometer:micrometer-registry-prometheus'
     api 'io.micrometer:micrometer-tracing-bridge-otel'
     api 'io.opentelemetry:opentelemetry-exporter-zipkin'
 
-    // Kafka - 이벤트 발행/구독 인프라 코드만 core에서 관리
+// Kafka - 이벤트 발행/구독 인프라 코드만 core에서 관리
     api 'org.springframework.kafka:spring-kafka'
 
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
+    testCompileOnly 'org.projectlombok:lombok'
+    testAnnotationProcessor 'org.projectlombok:lombok'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+    testImplementation 'org.springframework.security:spring-security-test'
+//rest-docs
+    asciidoctorExtensions 'org.springframework.restdocs:spring-restdocs-asciidoctor'
+    testImplementation 'org.springframework.restdocs:spring-restdocs-mockmvc'
 }
 
-// QueryDSL 설정
+def snippetsDir = file('build/generated-snippets')
 def querydslDir = "src/main/generated/querydsl"
 
 sourceSets {
@@ -95,7 +105,36 @@ sourceSets {
     }
 }
 
+// asciidoctor 설정(Spring REST Docs 관련 설정)
+asciidoctor {
+    dependsOn test //테스트 실행 후에 실행됨. ->Spring REST Docs의 문서 조각이 테스트 실행 후 생성되기 때문
+    configurations 'asciidoctorExtensions'
+    inputs.dir snippetsDir //build/generated-snippets 디렉토리를 문서 입력값으로 사용
 
+    //문서에 포함할 .adoc 파일 지정 -> index.adoc만 포함.
+    sources{
+        include("**/index.adoc")
+    }
+
+    baseDirFollowsSourceFile()
+
+    // 문서 내부에서 사용할 속성 정의
+    attributes 'snippets': snippetsDir,
+            'operation-curl-request-title': 'Example request',
+            'operation-http-response-title': 'Example response'
+}
+
+// REST Docs 폴더 초기화
+asciidoctor.doFirst {
+    //REST Docs를 다시 만들기 전에 기존 static/docs 폴더 삭제.
+    delete file('src/main/resources/static/docs')
+}
+// copyDocument (REST Docs 결과 복사)
+task copyDocument(type: Copy) {
+    dependsOn asciidoctor //asciidoctor 작업이 끝난 후 실행됨.
+    from file("build/docs/asciidoc") // Asciidoctor가 생성한 HTML 문서를 build/docs/asciidoc에서 가져옴.
+    into file("src/main/resources/static/docs") //Spring Boot 정적 리소스 디렉토리 (static/docs)로 복사.
+}
 
 // QueryDSL 생성된 소스 디렉토리 설정
 tasks.named('compileJava') {
