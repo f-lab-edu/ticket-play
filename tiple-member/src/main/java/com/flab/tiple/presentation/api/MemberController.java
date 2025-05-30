@@ -1,4 +1,4 @@
-package com.flab.tiple.api;
+package com.flab.tiple.presentation.api;
 
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;

@@ -8,7 +8,7 @@ import com.flab.tiple.application.dto.response.MemberCreateResponseDto;
 import com.flab.tiple.entity.member.Member;
 import com.flab.tiple.entity.member.enums.RoleEnum;
 import com.flab.tiple.exception.ErrorCode;
-import com.flab.tiple.exception.MemberDuplicatedException;
+import com.flab.tiple.domain.exception.MemberDuplicatedException;
 import com.flab.tiple.repository.MemberRepository;
 
 import org.springframework.stereotype.Service;

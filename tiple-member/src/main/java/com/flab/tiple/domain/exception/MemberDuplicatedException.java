@@ -1,5 +1,7 @@
-package com.flab.tiple.exception;
+package com.flab.tiple.domain.exception;
 
+import com.flab.tiple.exception.BusinessException;
+import com.flab.tiple.exception.ErrorCode;
 
 public class MemberDuplicatedException extends BusinessException {
     public MemberDuplicatedException(ErrorCode errorCode, String message) {
