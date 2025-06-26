@@ -4,7 +4,8 @@ plugins {
 	id 'jacoco'
 	id 'org.springframework.boot' version '3.4.3'
 	id 'io.spring.dependency-management' version '1.1.7'
-	id 'org.asciidoctor.jvm.convert' version '3.3.2' // rest-docs설정
+	id 'org.asciidoctor.jvm.convert' version '3.3.2'
+	id 'com.ewerk.gradle.plugins.querydsl' version '1.0.10'
 }
 
 group = 'com.flab.tiple'
@@ -34,19 +35,19 @@ dependencies {
 	implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 	implementation 'org.springframework.boot:spring-boot-starter-web'
 
-	// QueryDSL - implementation 의존성 추가
+	// QueryDSL - 버전 통일 및 설정 개선
 	implementation 'com.querydsl:querydsl-jpa:5.0.0:jakarta'
 	implementation 'com.querydsl:querydsl-core:5.0.0'
 	annotationProcessor 'com.querydsl:querydsl-apt:5.0.0:jakarta'
 	annotationProcessor 'jakarta.annotation:jakarta.annotation-api'
 	annotationProcessor 'jakarta.persistence:jakarta.persistence-api'
 
-	// JWT API - 다른 모듈에서 JWT 관련 인터페이스 사용 가능
+	// JWT API
 	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.11.5'
 	runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.11.5'
 
-	// 데이터베이스 - 모든 모듈에서 JPA 엔티티, Repository 사용
-	testRuntimeOnly 'com.h2database:h2'  // 테스트용이므로 implementation도 가능
+	// 데이터베이스
+	testRuntimeOnly 'com.h2database:h2'
 
 	compileOnly 'org.projectlombok:lombok'
 	annotationProcessor 'org.projectlombok:lombok'
@@ -56,10 +57,12 @@ dependencies {
 	testImplementation 'org.springframework.boot:spring-boot-starter-test'
 	testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
 	testImplementation 'org.springframework.security:spring-security-test'
-	//rest-docs
+
+	// REST Docs
 	asciidoctorExtensions 'org.springframework.restdocs:spring-restdocs-asciidoctor'
 	testImplementation 'org.springframework.restdocs:spring-restdocs-mockmvc'
 }
+
 
 def snippetsDir = file('build/generated-snippets')
 def querydslDir = "src/main/generated/querydsl"
@@ -76,32 +79,6 @@ sourceSets {
 		}
 	}
 }
-
-// QueryDSL 컴파일 태스크
-task compileQuerydsl(type: JavaCompile, group: 'build') {
-	// 1. 소스 설정: 메인 소스 Java 파일 지정
-	source = sourceSets.main.java
-	// 2. 클래스패스 설정: 컴파일에 필요한 의존성 경로 지정
-	classpath = configurations.compileClasspath
-	// 3. 어노테이션 프로세서 경로 설정
-	options.annotationProcessorPath = configurations.annotationProcessor
-	// 4. 컴파일러 옵션 설정
-	options.compilerArgs = [
-			"-proc:only",           // 오직 어노테이션 프로세싱만 수행
-			"-processor", "com.querydsl.apt.jpa.JPAAnnotationProcessor" // QueryDSL 전용 어노테이션 프로세서 지정
-	]
-	// 5. 생성된 소스 파일의 출력 디렉토리 지정
-	destinationDir = file(querydslDir)
-
-	// 6. 태스크 실행 전 수행: 기존 Q타입 클래스 디렉토리 삭제 및 재생성
-	doFirst {
-		file(querydslDir).deleteDir()
-		file(querydslDir).mkdirs()
-	}
-}
-
-// compileJava 이전에 compileQuerydsl 실행
-compileJava.dependsOn compileQuerydsl
 
 // asciidoctor 설정(Spring REST Docs 관련 설정)
 asciidoctor {
@@ -127,7 +104,6 @@ asciidoctor.doFirst {
 	//REST Docs를 다시 만들기 전에 기존 static/docs 폴더 삭제.
 	delete file('src/main/resources/static/docs')
 }
-
 // copyDocument (REST Docs 결과 복사)
 task copyDocument(type: Copy) {
 	dependsOn asciidoctor //asciidoctor 작업이 끝난 후 실행됨.
@@ -135,8 +111,10 @@ task copyDocument(type: Copy) {
 	into file("src/main/resources/static/docs") //Spring Boot 정적 리소스 디렉토리 (static/docs)로 복사.
 }
 
-// build 시 copyDocument도 실행
-build.dependsOn copyDocument
+// QueryDSL 생성된 소스 디렉토리 설정
+tasks.named('compileJava') {
+	options.annotationProcessorGeneratedSourcesDirectory = file(querydslDir)
+}
 
 // 클린 시 QueryDSL 생성 파일도 삭제
 clean {
@@ -146,6 +124,7 @@ clean {
 		delete file('out')  // IDE가 생성하는 출력 디렉토리도 정리
 	}
 }
+
 
 // 테스트 커버리지 제외 대상 - Core 모듈 특화
 jacocoTestCoverageVerification {

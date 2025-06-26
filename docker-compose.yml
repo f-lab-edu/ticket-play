@@ -1,10 +1,10 @@
-version: '3.8'
 
 services:
+  # 모니터링 및 로깅 스택
   prometheus:
     image: prom/prometheus:latest
     container_name: prometheus
-    user: "$UID:$GID"
+    user: "${UID:-1000}:${GID:-1000}"
     ports:
       - "9090:9090"
     volumes:
@@ -16,7 +16,7 @@ services:
   grafana:
     image: grafana/grafana:latest
     container_name: grafana
-    user: "$UID:$GID"
+    user: "${UID:-1000}:${GID:-1000}"
     ports:
       - "3000:3000"
     volumes:
@@ -35,13 +35,13 @@ services:
     volumes:
       - ./tempo.yaml:/etc/tempo.yaml
     ports:
-      - "14250:14250"  # jaeger-grpc
-      - "14268:14268"  # jaeger-http
-      - "9411:9411"    # zipkin
-      - "3200:3200"    # tempo API
-      - "4317:4317"    # otlp-grpc
-      - "4318:4318"    # otlp-http
-      - "9095:9095"    # tempo-query
+      - "14250:14250"
+      - "14268:14268"
+      - "9411:9411"
+      - "3200:3200"
+      - "4317:4317"
+      - "4318:4318"
+      - "9095:9095"
     networks:
       - app-network
 
@@ -61,7 +61,7 @@ services:
     command: [ "-config.file=/etc/promtail.yaml" ]
     volumes:
       - ./promtail.yaml:/etc/promtail.yaml
-      - ./logs:/logs  # 로그 디렉토리 마운트
+      - ./logs:/logs
     ports:
       - "9080:9080"
     depends_on:
@@ -69,7 +69,7 @@ services:
     networks:
       - app-network
 
-
+  # 인프라 서비스
   zookeeper:
     image: confluentinc/cp-zookeeper:7.4.0
     container_name: zookeeper
@@ -85,6 +85,7 @@ services:
       retries: 5
     networks:
       - app-network
+
   kafka:
     image: confluentinc/cp-kafka:7.4.0
     container_name: kafka
@@ -92,23 +93,17 @@ services:
       zookeeper:
         condition: service_healthy
     ports:
-      - "9094:9092"  # 외부 포트를 9094로 변경 (내부는 그대로 9092 유지)
+      - "9094:9092"
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      #PLAINTEXT: 보통 Kafka 클러스터 내부 통신에 사용되는 리스너
-      #PLAINTEXT_HOST: 외부(호스트 머신)에서 접근하기 위한 리스너를 지칭
-      #KAFKA_ADVERTISED_LISTENERS: 어드버타이즈드 리스너: 클라이언트에게 알릴 연결 주소
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:9094
-      # 리스너 보안 프로토콜 매핑
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-      # 브로커 간 통신에 사용할 리스너
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-      # 토픽 설정
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1  # 오프셋 토픽 복제 팩터
-      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"    # 자동 토픽 생성 활성화
-      KAFKA_DELETE_TOPIC_ENABLE: "true"          # 토픽 삭제 활성화
-      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0  # 그룹 리밸런싱 초기 지연
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
+      KAFKA_DELETE_TOPIC_ENABLE: "true"
+      KAFKA_GROUP_INITIAL_REBALANCE_DELAY_MS: 0
     healthcheck:
       test: ["CMD", "kafka-topics", "--bootstrap-server", "localhost:9092", "--list"]
       interval: 10s
@@ -137,7 +132,6 @@ services:
     container_name: redis
     ports:
       - "6379:6379"
-    # 볼륨을 제거하고 설정을 변경하여 데이터 지속성 비활성화
     command: redis-server --save "" --appendonly no
     networks:
       - app-network
@@ -147,109 +141,6 @@ services:
       timeout: 5s
       retries: 5
 
-  server:
-    container_name: spring-server
-    volumes:
-      - ./logs:/logs
-    # Dockerfile기반으로 build
-    build:
-      context: .
-      dockerfile: Dockerfile
-    # 환경변수 설정 - 인코딩 설정 추가
-    environment:
-      - SPRING_PROFILES_ACTIVE=local-docker
-      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/tiple?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=UTF-8
-      - SPRING_DATASOURCE_USERNAME=tiple
-      - SPRING_DATASOURCE_PASSWORD=0000
-      - LANG=C.UTF-8
-      - LC_ALL=C.UTF-8
-      - JAVA_OPTS=-Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8
-      - SERVER_PORT=8083
-      # Redis 연결 설정 추가
-      - SPRING_REDIS_HOST=redis
-      - SPRING_REDIS_PORT=6379
-    ports:
-      - "8083:8083"
-    # mysql이 제대로 실행되면 실행
-    depends_on:
-      mysql:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      kafka:
-        condition: service_healthy
-    networks:
-      - app-network
-
-  server2:
-    container_name: spring-server2
-    volumes:
-      - ./logs:/logs
-    # Dockerfile기반으로 build
-    build:
-      context: .
-      dockerfile: Dockerfile
-    # 환경변수 설정 - 인코딩 설정 추가
-    environment:
-      - SPRING_PROFILES_ACTIVE=local-docker
-      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/tiple?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=UTF-8
-      - SPRING_DATASOURCE_USERNAME=tiple
-      - SPRING_DATASOURCE_PASSWORD=0000
-      - LANG=C.UTF-8
-      - LC_ALL=C.UTF-8
-      - JAVA_OPTS=-Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8
-      - SERVER_PORT=8084
-      # Redis 연결 설정 추가
-      - SPRING_REDIS_HOST=redis
-      - SPRING_REDIS_PORT=6379
-    ports:
-      - "8084:8084"
-    # mysql이 제대로 실행되면 실행
-    depends_on:
-      mysql:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      kafka:
-        condition: service_healthy
-    networks:
-      - app-network
-
-  server3:
-    container_name: spring-server3
-    volumes:
-      - ./logs:/logs
-    # Dockerfile기반으로 build
-    build:
-      context: .
-      dockerfile: Dockerfile
-    # 환경변수 설정 - 인코딩 설정 추가
-    environment:
-      - SPRING_PROFILES_ACTIVE=local-docker
-      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/tiple?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=UTF-8
-      - SPRING_DATASOURCE_USERNAME=tiple
-      - SPRING_DATASOURCE_PASSWORD=0000
-      - LANG=C.UTF-8
-      - LC_ALL=C.UTF-8
-      - JAVA_OPTS=-Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8
-      - SERVER_PORT=8085
-      # Redis 연결 설정 추가
-      - SPRING_REDIS_HOST=redis
-      - SPRING_REDIS_PORT=6379
-    ports:
-      - "8085:8085"
-    # mysql이 제대로 실행되면 실행
-    depends_on:
-      mysql:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      kafka:
-        condition: service_healthy
-    networks:
-      - app-network
-
-  # MySQL 서비스
   mysql:
     image: mysql:8.0.32
     container_name: mysql
@@ -260,7 +151,6 @@ services:
       MYSQL_PASSWORD: 0000
     command: --default-authentication-plugin=mysql_native_password --character-set-server=utf8mb4 --collation-server=utf8mb4_unicode_ci
     volumes:
-      # - mysql-data:/var/lib/mysql # MySQL 데이터 유지 (mysql-data) → 컨테이너가 재시작되어도 데이터 유지됨.
       - ./mysql/init:/docker-entrypoint-initdb.d
       - ./mysql/config:/etc/mysql/conf.d
     ports:
@@ -273,7 +163,189 @@ services:
     networks:
       - app-network
 
-  # Nginx 서비스
+  # 애플리케이션 서비스들
+  tiple-concert:
+    container_name: tiple-concert
+    build:
+      context: ./tiple-concert
+      dockerfile: Dockerfile
+    volumes:
+      - ./logs/concert:/logs
+    environment:
+      - SPRING_PROFILES_ACTIVE=local-docker
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/tiple?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=UTF-8
+      - SPRING_DATASOURCE_USERNAME=tiple
+      - SPRING_DATASOURCE_PASSWORD=0000
+      - SPRING_REDIS_HOST=redis
+      - SPRING_REDIS_PORT=6379
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - LANG=C.UTF-8
+      - LC_ALL=C.UTF-8
+      - JAVA_OPTS=-Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8
+      - SERVER_PORT=8081
+    ports:
+      - "8081:8081"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8081/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  tiple-auth:
+    container_name: tiple-core
+    build:
+      context: ./tiple-core
+      dockerfile: Dockerfile
+    volumes:
+      - ./logs/auth:/logs
+    environment:
+      - SPRING_PROFILES_ACTIVE=local-docker
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/tiple?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=UTF-8
+      - SPRING_DATASOURCE_USERNAME=tiple
+      - SPRING_DATASOURCE_PASSWORD=0000
+      - SPRING_REDIS_HOST=redis
+      - SPRING_REDIS_PORT=6379
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - LANG=C.UTF-8
+      - LC_ALL=C.UTF-8
+      - JAVA_OPTS=-Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8
+      - SERVER_PORT=8082
+    ports:
+      - "8082:8082"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8082/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  tiple-member:
+    container_name: tiple-member
+    build:
+      context: ./tiple-member
+      dockerfile: Dockerfile
+    volumes:
+      - ./logs/payment:/logs
+    environment:
+      - SPRING_PROFILES_ACTIVE=local-docker
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/tiple?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=UTF-8
+      - SPRING_DATASOURCE_USERNAME=tiple
+      - SPRING_DATASOURCE_PASSWORD=0000
+      - SPRING_REDIS_HOST=redis
+      - SPRING_REDIS_PORT=6379
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - LANG=C.UTF-8
+      - LC_ALL=C.UTF-8
+      - JAVA_OPTS=-Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8
+      - SERVER_PORT=8083
+    ports:
+      - "8083:8083"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8083/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  tiple-sse:
+    container_name: tiple-sse
+    build:
+      context: ./tiple-sse
+      dockerfile: Dockerfile
+    volumes:
+      - ./logs/notification:/logs
+    environment:
+      - SPRING_PROFILES_ACTIVE=local-docker
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/tiple?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=UTF-8
+      - SPRING_DATASOURCE_USERNAME=tiple
+      - SPRING_DATASOURCE_PASSWORD=0000
+      - SPRING_REDIS_HOST=redis
+      - SPRING_REDIS_PORT=6379
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - LANG=C.UTF-8
+      - LC_ALL=C.UTF-8
+      - JAVA_OPTS=-Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8
+      - SERVER_PORT=8084
+    ports:
+      - "8084:8084"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8084/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+  tiple-ticket:
+    container_name: tiple-ticket
+    build:
+      context: ./tiple-ticket
+      dockerfile: Dockerfile
+    volumes:
+      - ./logs/notification:/logs
+    environment:
+      - SPRING_PROFILES_ACTIVE=local-docker
+      - SPRING_DATASOURCE_URL=jdbc:mysql://mysql:3306/tiple?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC&characterEncoding=UTF-8
+      - SPRING_DATASOURCE_USERNAME=tiple
+      - SPRING_DATASOURCE_PASSWORD=0000
+      - SPRING_REDIS_HOST=redis
+      - SPRING_REDIS_PORT=6379
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
+      - LANG=C.UTF-8
+      - LC_ALL=C.UTF-8
+      - JAVA_OPTS=-Dfile.encoding=UTF-8 -Dsun.jnu.encoding=UTF-8
+      - SERVER_PORT=8085
+    ports:
+      - "8085:8085"
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    networks:
+      - app-network
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:8084/actuator/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
+
+  # API Gateway (Nginx)
   nginx:
     image: nginx:latest
     container_name: nginx-server
@@ -285,14 +357,14 @@ services:
     environment:
       - NGINX_ENTRYPOINT_QUIET_LOGS=1
     depends_on:
-      - server
+      - tiple-concert
+      - tiple-auth
+      - tiple-member
+      - tiple-sse
+      - tiple-ticket
     networks:
       - app-network
 
 networks:
   app-network:
     driver: bridge
-
-# Redis 볼륨을 제거하여 컨테이너 재시작 시 데이터가 유지되지 않도록 함
-# volumes:
-#  mysql-data:

@@ -30,8 +30,6 @@ repositories {
 // Core 모듈: 공통 도메인, 엔티티, 유틸리티, 인프라 설정
 dependencies {
 	implementation project(':tiple-core')
-
-
 // JWT API - 다른 모듈에서 JWT 관련 인터페이스 사용 가능
 	runtimeOnly 'io.jsonwebtoken:jjwt-impl:0.11.5'
 	runtimeOnly 'io.jsonwebtoken:jjwt-jackson:0.11.5'

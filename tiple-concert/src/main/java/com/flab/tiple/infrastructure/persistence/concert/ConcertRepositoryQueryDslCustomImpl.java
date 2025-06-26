@@ -6,7 +6,8 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 
-import com.flab.tiple.domain.Concert;
+import com.flab.tiple.domain
+	.Concert;
 import com.flab.tiple.domain.QConcert;
 import com.flab.tiple.domain.enums.ConcertStatus;
 import com.querydsl.jpa.impl.JPAQueryFactory;

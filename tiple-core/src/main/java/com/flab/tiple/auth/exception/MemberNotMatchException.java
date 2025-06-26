@@ -1,4 +1,4 @@
-package com.flab.tiple.domain.exception;
+package com.flab.tiple.auth.exception;
 
 import com.flab.tiple.exception.BusinessException;
 import com.flab.tiple.exception.ErrorCode;

@@ -1,3 +1,194 @@
+
+# 공통 설정
 spring:
-  application:
-   name: tiple-core
+  profiles:
+    active: ${SPRING_PROFILES_ACTIVE:local}
+  retryable:
+    maxAttempts: 3
+    backoff:
+      delay: 1000
+      multiplier: 2
+  task:
+    timeout:
+      executor:
+        core_pool_size: 5
+        max_pool_size: 5
+        queue_capacity: 200
+        keep_alive_seconds: 60
+        thread_name_prefix: timeout-
+        await_termination_seconds: 30
+    event:
+      executor:
+        core_pool_size: 5
+        max_pool_size: 5
+        queue_capacity: 200
+        thread_name_prefix: event-
+  jpa:
+    properties:
+      hibernate:
+        format_sql: true # Hibernate가 생성하는 SQL 쿼리를 사람이 읽기 쉬운 형태로 포맷팅
+  management:
+    endpoints:
+      web:
+        exposure:
+          include: "prometheus"
+    tracing:
+      sampling:
+        probability: 1.0
+    zipkin:
+      tracing:
+        endpoint: http://tempo:9411/api/v2/spans
+    metrics:
+      distribution:
+        percentiles-histogram:
+          http:
+            server:
+              requests: true
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVER:kafka:9092}
+    properties:
+      enable.telemetry: false
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.springframework.kafka.support.serializer.JsonSerializer
+      properties:
+        spring.json.type.mapping: ticketRequest:com.flab.tiple.ticket.reservation.dto.message.TicketReservationMessage,ticketResult:com.flab.tiple.ticket.reservation.dto.message.TicketReservationResultMessage
+    consumer:
+      auto-offset-reset: earliest
+      enable-auto-commit: true
+      max-poll-records: 500
+      heartbeat-interval: 3000
+      group-id: ticketing-service
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.springframework.kafka.support.serializer.JsonDeserializer
+      properties:
+        spring.json.trusted.packages: com.flab.tiple.ticket.reservation.dto.message
+        spring.json.type.mapping: ticketRequest:com.flab.tiple.ticket.reservation.dto.message.TicketReservationMessage,ticketResult:com.flab.tiple.ticket.reservation.dto.message.TicketReservationResultMessage
+
+ticketing:
+  kafka:
+    topics:
+      ticket-request: ticket-reservation-requests
+      ticket-result: ticket-reservation-results
+      ticket-waiting: ticket-waiting-queue
+
+server:
+  port: ${PORT:8083}
+  forward-headers-strategy: native # 서버가 요청 헤더를 어떻게 처리할지 지정
+  servlet:
+    encoding:
+      charset: UTF-8
+      force: true
+      enabled: true
+      force-request: true
+      force-response: true
+  tomcat:
+    uri-encoding: UTF-8
+
+logging:
+  level:
+    org.apache.kafka.clients: WARN
+    org.hibernate.SQL: debug
+    org.hibernate.type: trace
+    org.hibernate.resource.transaction: debug
+    org.springframework.transaction: debug
+    org.springframework.orm.jpa: debug
+    root: info
+    org.apache.kafka: DEBUG
+    org.springframework.kafka: DEBUG
+    com.example.ticketing: DEBUG
+  #  pattern:
+  #    console: " [${spring.application.name:}] | %logger{36} | %X{method} %X{path} | totalTime=%X{totalTime:-0ms} lockTime=%X{lockTime:-0ms} firstLockTime=%X{firstLockTime:-none} secondLockTime=%X{secondLockTime:-0}| %msg%n"
+  #    file: "[${spring.application.name:}] | %logger{36} | %X{method} %X{path} | totalTime=%X{totalTime:-0ms} lockTime=%X{lockTime:-0ms} firstLockTime=%X{firstLockTime:-none} secondLockTime=%X{secondLockTime:-0} | %msg%n"
+  file:
+    name: /logs/ticket-service.log
+
+
+jwt:
+  secret: ${JWT_SECRET:default_dev_secret_key}
+  expiration-ms: 86400000
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  endpoint:
+    prometheus:
+      enabled: true
+    health:
+      show-details: always
+  prometheus:
+    metrics:
+      export:
+        enabled: true
+
+
+---
+# 로컬 개발 환경 (H2 데이터베이스 사용)
+spring:
+  config:
+    activate:
+      on-profile: local
+  datasource:
+    url: jdbc:h2:tcp://localhost/~/tiple
+    username: sa
+    password:
+    driver-class-name: org.h2.Driver
+  jpa:
+    hibernate:
+      ddl-auto: none  # JPA에 의한 테이블 자동 생성 비활성화
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.H2Dialect
+  sql:
+    init:
+      mode: always
+      schema-locations: classpath:data/schema.sql
+      data-locations: classpath:data/data.sql
+
+---
+# Docker 환경 (MySQL 데이터베이스 사용)
+spring:
+  config:
+    activate:
+      on-profile: local-docker
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://mysql:3306/tiple?useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=UTC}
+    username: ${SPRING_DATASOURCE_USERNAME:tiple}
+    password: ${SPRING_DATASOURCE_PASSWORD:0000}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      maximum-pool-size: 40  # 기본값 10에서 증가
+      connection-timeout: 30000  # 30초(기본값)
+      max-lifetime: 1800000  # 30분
+      idle-timeout: 600000  # 10분
+  jpa:
+    hibernate:
+      ddl-auto: none
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQL8Dialect
+
+  data:
+    redis:
+      host: ${SPRING_REDIS_HOST}
+      port: ${SPRING_REDIS_PORT}
+      # Redisson 관련 설정 추가
+      redisson:
+        config:
+          # 서버 설정
+          single-server-config:
+            connection-minimum-idle-size: ${REDIS_MIN_IDLE_SIZE:8}        # 유휴 연결 수
+            connection-pool-size: ${REDIS_POOL_SIZE:24}                   # 연결 풀 크기
+            retry-attempts: ${REDIS_RETRY_ATTEMPTS:3}                     # 재시도 횟수
+            retry-interval: ${REDIS_RETRY_INTERVAL:1500}                  # 재시도 간격(ms)
+            subscriptions-per-connection: ${REDIS_SUBS_PER_CONN:5}        # 연결당 구독 수
+            subscription-connection-pool-size: ${REDIS_SUB_POOL_SIZE:50}  # 구독 연결 풀 크기
+            timeout: ${REDIS_TIMEOUT:3000}                                # 타임아웃(ms)
+      # Jedis 설정 (기존)
+      jedis:
+        pool:
+          max-active: 8
+      connect-timeout: 20
+

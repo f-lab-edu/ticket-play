@@ -15,8 +15,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import com.flab.tiple.application.dto.request.MemberCreateRequestDto;
 import com.flab.tiple.application.dto.response.MemberCreateResponseDto;
 import com.flab.tiple.application.service.MemberServiceImpl;
+import com.flab.tiple.domain.exception.MemberDuplicatedException;
 import com.flab.tiple.entity.member.Member;
-import com.flab.tiple.exception.MemberDuplicatedException;
 import com.flab.tiple.repository.MemberRepository;
 
 /**

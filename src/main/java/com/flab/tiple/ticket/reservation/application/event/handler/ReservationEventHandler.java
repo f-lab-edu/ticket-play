@@ -98,9 +98,7 @@ public class ReservationEventHandler {
 			// 다음 대기자 처리
 			CompletableFuture.runAsync(() -> processNextWaitingUser(
 				event.getConcertId(), event.getSeatId()))
-		).thenRun(() -> {
-			log.info("예약 취소 처리 완료: reservationId={}", event.getReservationId());
-		}).exceptionally(throwable -> {
+		).exceptionally(throwable -> {
 			log.error("예약 취소 처리 실패: reservationId={}", event.getReservationId(), throwable);
 			return null;
 		});

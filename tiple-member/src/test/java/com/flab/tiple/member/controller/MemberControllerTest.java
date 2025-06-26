@@ -18,11 +18,11 @@ import org.springframework.test.web.servlet.ResultActions;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.flab.tiple.api.MemberController;
 import com.flab.tiple.application.dto.request.MemberCreateRequestDto;
 import com.flab.tiple.application.dto.response.MemberCreateResponseDto;
 import com.flab.tiple.application.service.MemberService;
 import com.flab.tiple.config.AbstractRestDocs;
+import com.flab.tiple.presentation.api.MemberController;
 import com.flab.tiple.response.ApiResponse;
 import com.flab.tiple.security.CustomUserDetailsService;
 import com.flab.tiple.security.JwtTokenProvider;
